@@ -1,6 +1,7 @@
 const express        = require('express');
 const router         = express.Router();
 const authMiddleware = require('../middlewares/auth');
+const requireAdmin   = require('../middlewares/requireAdmin');
 const pool           = require('../config/db');
 
 // GET /api/support/tickets — tickets del usuario
@@ -66,7 +67,7 @@ router.post('/tickets/:id/messages', authMiddleware, async (req, res) => {
 module.exports = router;
 
 // GET /api/support/admin/tickets — todos los tickets (admin)
-router.get('/admin/tickets', authMiddleware, async (req, res) => {
+router.get('/admin/tickets', authMiddleware, requireAdmin, async (req, res) => {
   try {
     const [rows] = await pool.execute('CALL sp_get_all_tickets()');
     return res.status(200).json({ ok: true, data: rows[0] });
@@ -77,7 +78,7 @@ router.get('/admin/tickets', authMiddleware, async (req, res) => {
 });
 
 // PUT /api/support/tickets/:id/close — cerrar ticket
-router.put('/tickets/:id/close', authMiddleware, async (req, res) => {
+router.put('/tickets/:id/close', authMiddleware, requireAdmin, async (req, res) => {
   try {
     await pool.execute('CALL sp_close_ticket(?)', [req.params.id]);
     return res.status(200).json({ ok: true, message: 'Ticket cerrado.' });
@@ -102,7 +103,7 @@ router.put('/tickets/:id/read', authMiddleware, async (req, res) => {
 });
 
 // PUT /api/support/tickets/:id/read-admin
-router.put('/tickets/:id/read-admin', authMiddleware, async (req, res) => {
+router.put('/tickets/:id/read-admin', authMiddleware, requireAdmin, async (req, res) => {
   try {
     await pool.execute(
       'UPDATE support_tickets SET last_read_admin_at = NOW() WHERE id_ticket = ?',

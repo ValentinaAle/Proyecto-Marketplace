@@ -2,6 +2,7 @@
 const express        = require('express');
 const router         = express.Router();
 const authMiddleware = require('../middlewares/auth');
+const requireAdmin   = require('../middlewares/requireAdmin');
 const pool           = require('../config/db');
 
 // GET /api/posts/categories
@@ -61,7 +62,7 @@ router.get('/my', authMiddleware, async (req, res) => {
 });
 
 // GET /api/posts/pending — posts pendientes (admin)
-router.get('/pending', authMiddleware, async (req, res) => {
+router.get('/pending', authMiddleware, requireAdmin, async (req, res) => {
   try {
     const [rows] = await pool.execute('CALL sp_get_pending_posts()');
     return res.status(200).json({ ok: true, data: rows[0] });
@@ -72,7 +73,7 @@ router.get('/pending', authMiddleware, async (req, res) => {
 });
 
 // PUT /api/posts/:id/status — cambiar estado (admin)
-router.put('/:id/status', authMiddleware, async (req, res) => {
+router.put('/:id/status', authMiddleware, requireAdmin, async (req, res) => {
   const { status, reason } = req.body;
   if (status === undefined) return res.status(400).json({ ok: false, message: 'Status requerido.' });
 
@@ -86,7 +87,7 @@ router.put('/:id/status', authMiddleware, async (req, res) => {
 });
 
 // PUT /api/posts/:id — editar post (admin)
-router.put('/:id', authMiddleware, async (req, res) => {
+router.put('/:id', authMiddleware, requireAdmin, async (req, res) => {
   const { title, description, image_url } = req.body;
 
   if (!title || !description) {
@@ -106,7 +107,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
 });
 
 // DELETE /api/posts/:id — eliminar post (admin)
-router.delete('/:id', authMiddleware, async (req, res) => {
+router.delete('/:id', authMiddleware, requireAdmin, async (req, res) => {
   try {
     await pool.execute('DELETE FROM posts WHERE id_post = ?', [req.params.id]);
     return res.status(200).json({ ok: true, message: 'Publicación eliminada.' });
