@@ -75,6 +75,7 @@ const htmlPages = {
   '/index.html':        'index.html',
   '/home':              'home.html',
   '/home.html':         'home.html',
+  '/html/home.html':    'home.html',
   '/register':          'register.html',
   '/register.html':     'register.html',
   '/forgot-password':   'forgot-password.html',
@@ -83,6 +84,13 @@ const htmlPages = {
 
 Object.entries(htmlPages).forEach(([route, file]) => {
   app.get(route, (req, res) => {
+    // Las páginas pueden contener información de una sesión autenticada.
+    // Evita que el navegador las restaure desde su caché al navegar atrás/adelante.
+    res.set({
+      'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+      Pragma: 'no-cache',
+      Expires: '0',
+    });
     res.sendFile(path.join(htmlDir, file));
   });
 });
