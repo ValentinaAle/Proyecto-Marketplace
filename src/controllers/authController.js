@@ -8,6 +8,7 @@ const pool     = require('../config/db');
 ───────────────────────────────────────── */
 const register = async (req, res) => {
   const { email, password, name, phone } = req.body;
+  let connection;
 
   // Validaciones básicas
   if (!email || !password || !name) {
@@ -25,8 +26,11 @@ const register = async (req, res) => {
   }
 
   try {
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
     // 1. Verificar que el email no exista
-    const [rows] = await pool.execute(
+    const [rows] = await connection.execute(
       'CALL sp_check_email_exists(?)',
       [email]
     );
@@ -44,25 +48,34 @@ const register = async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 10);
 
     // 3. Crear el usuario
-    await pool.execute(
+    await connection.execute(
       'CALL sp_create_user(?, ?, ?)',
       [email, passwordHash, phone || null]
     );
 
     // 4. Obtener el id del usuario recién creado
-    const [newUserRows] = await pool.execute(
+    const [newUserRows] = await connection.execute(
       'CALL sp_check_email_exists(?)',
       [email]
     );
     const newUser = newUserRows[0][0];
 
     // 5. Crear el perfil vinculado al usuario
-    await pool.execute(
+    await connection.execute(
       'CALL sp_create_profile(?, ?, ?)',
       [name, null, newUser.id_user]
     );
 
-    // 6. Generar JWT
+    // 6. Asignar el rol USER de forma explícita.
+    await connection.execute(
+      `INSERT INTO users_roles (id_user, id_role)
+       SELECT ?, id_role FROM roles WHERE name = 'USER'`,
+      [newUser.id_user]
+    );
+
+    await connection.commit();
+
+    // 7. Generar JWT
     const token = generateToken(newUser.id_user, newUser.email);
 
     return res.status(201).json({
@@ -79,11 +92,14 @@ const register = async (req, res) => {
     });
 
   } catch (error) {
+    if (connection) await connection.rollback();
     console.error('Error en register:', error);
     return res.status(500).json({
       ok: false,
       message: 'Error interno del servidor.',
     });
+  } finally {
+    if (connection) connection.release();
   }
 };
 
