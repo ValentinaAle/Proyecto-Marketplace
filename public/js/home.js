@@ -134,8 +134,8 @@ async function cargarTicketsAdmin() {
 }
 
 function renderTicketsAdmin(tickets) {
-  const unread = tickets.filter(t => t.admin_replies < 2 && t.status === 'OPEN');
-  const open = tickets.filter(t => t.admin_replies >= 2 && t.status === 'OPEN');
+  const unread = tickets.filter(t => Number(t.admin_replies) === 0 && t.status === 'OPEN');
+  const open = tickets.filter(t => Number(t.admin_replies) > 0 && t.status === 'OPEN');
   const closed = tickets.filter(t => t.status === 'CLOSED');
 
   document.getElementById('count-unread').textContent = unread.length;
