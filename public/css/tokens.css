@@ -1,15 +1,15 @@
 :root {
     --fv-accent: #168f7d;
     --fv-accent-strong: #0f7668;
-    --fv-accent-soft: #e8f7f3;
-    --fv-accent-faint: #f4fbf9;
+    --fv-accent-soft: #dcece7;
+    --fv-accent-faint: #e8f1ee;
     --fv-ink: #101916;
     --fv-ink-soft: #3f504b;
     --fv-muted: #62736e;
-    --fv-line: #d3dfdb;
-    --fv-line-strong: #b8cac4;
-    --fv-surface: #ffffff;
-    --fv-canvas: #edf2f0;
+    --fv-line: #c4d1cd;
+    --fv-line-strong: #aebfba;
+    --fv-surface: #f5f8f6;
+    --fv-canvas: #e2e9e6;
     --fv-danger: #c53d45;
     --fv-danger-soft: #fff0f1;
     --fv-warning: #b66b12;

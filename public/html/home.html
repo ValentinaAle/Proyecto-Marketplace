@@ -11,14 +11,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
 
-    <link rel="stylesheet" href="/css/tokens.css?v=20260927-5">
-    <link rel="stylesheet" href="/css/home.css?v=20260927-5">
+    <link rel="stylesheet" href="/css/tokens.css?v=20260928-1">
+    <link rel="stylesheet" href="/css/home.css?v=20260928-8">
     <link rel="stylesheet" href="/css/addpost.css?v=20260927-5">
     <link rel="stylesheet" href="/css/terms.css?v=20260927-5">
     <link rel="stylesheet" href="/css/profile.css?v=20260927-5">
     <link rel="stylesheet" href="/css/support.css?v=20260927-5">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <link rel="stylesheet" href="/css/chatbot.css?v=20260927-5">
+    <link rel="stylesheet" href="/css/chatbot.css?v=20260928-1">
 </head>
 
 <body>
@@ -649,7 +649,7 @@
                 </section>
 
                 <!-- CATEGORIAS -->
-                <div class="categories-scroll">
+                <div class="categories-scroll" id="categories-scroll">
 
                     <div class="home-card" data-category="Técnicos">
                         <i class="bi bi-tools home-card-icon"></i>
@@ -687,6 +687,12 @@
                         <p>Sesiones, eventos y contenido visual.</p>
                     </div>
 
+                </div>
+
+                <div class="categories-scrollbar" role="scrollbar" aria-label="Desplazar filtros de servicios"
+                    aria-controls="categories-scroll" aria-orientation="horizontal" aria-valuemin="0"
+                    aria-valuemax="100" aria-valuenow="0" tabindex="0">
+                    <span class="categories-scrollbar-thumb"></span>
                 </div>
 
                 <!-- PUBLICACIONES -->
@@ -842,7 +848,7 @@
 
     </div>
 
-    <script src="/js/home.js"></script>
+    <script src="/js/home.js?v=20260928-1"></script>
 
 </body>
 
