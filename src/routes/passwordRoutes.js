@@ -2,11 +2,27 @@ const express     = require('express');
 const router      = express.Router();
 const pool        = require('../config/db');
 const bcrypt      = require('bcryptjs');
+const crypto      = require('crypto');
 const transporter = require('../config/mailer');
+const requests = new Map();
+const attempts = new Map();
+const WINDOW_MS = 15 * 60 * 1000;
+
+const isLimited = (store, key, limit) => {
+  const now = Date.now();
+  const values = (store.get(key) || []).filter(time => now - time < WINDOW_MS);
+  if (values.length >= limit) return true;
+  values.push(now);
+  store.set(key, values);
+  return false;
+};
 
 router.post('/forgot', async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ ok: false, message: 'El email es requerido.' });
+  if (isLimited(requests, `${req.ip}:${email.toLowerCase()}`, 3)) {
+    return res.status(429).json({ ok: false, message: 'Demasiadas solicitudes. Intentá más tarde.' });
+  }
 
   try {
     const [rows] = await pool.execute('CALL sp_check_email_exists(?)', [email]);
@@ -17,7 +33,7 @@ router.post('/forgot', async (req, res) => {
     }
 
     // Generar código de 6 dígitos
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const code = crypto.randomInt(100000, 1000000).toString();
 
     await pool.execute(
       'UPDATE users SET reset_token = ?, reset_token_expires = NOW() + INTERVAL 15 MINUTE WHERE id_user = ?',
@@ -56,6 +72,9 @@ router.post('/forgot', async (req, res) => {
 router.post('/verify', async (req, res) => {
   const { email, code } = req.body;
   if (!email || !code) return res.status(400).json({ ok: false, message: 'Email y código son requeridos.' });
+  if (isLimited(attempts, `${req.ip}:${email.toLowerCase()}`, 5)) {
+    return res.status(429).json({ ok: false, message: 'Demasiados intentos. Solicitá un nuevo código.' });
+  }
 
   try {
     const [rows] = await pool.execute(
@@ -85,6 +104,9 @@ router.post('/reset', async (req, res) => {
   if (newPassword.length < 6) {
     return res.status(400).json({ ok: false, message: 'La contraseña debe tener al menos 6 caracteres.' });
   }
+  if (isLimited(attempts, `${req.ip}:${email.toLowerCase()}`, 5)) {
+    return res.status(429).json({ ok: false, message: 'Demasiados intentos. Solicitá un nuevo código.' });
+  }
 
   try {
     const [rows] = await pool.execute(
@@ -103,6 +125,7 @@ router.post('/reset', async (req, res) => {
       'UPDATE users SET password_hash = ?, reset_token = NULL, reset_token_expires = NULL WHERE id_user = ?',
       [passwordHash, user.id_user]
     );
+    attempts.delete(`${req.ip}:${email.toLowerCase()}`);
 
     return res.status(200).json({ ok: true, message: 'Contraseña actualizada correctamente.' });
 
