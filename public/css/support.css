@@ -631,3 +631,478 @@
     50%  { opacity: 0.6; transform: scale(1.2); }
     100% { opacity: 1; transform: scale(1); }
 }
+
+/* ================= ADMIN SUPPORT WORKSPACE ================= */
+#admin-support-modal {
+    padding: clamp(10px, 2vw, 24px);
+    background: rgba(12, 24, 21, .62);
+    backdrop-filter: blur(4px);
+}
+
+.admin-support-box {
+    width: min(1380px, 100%);
+    height: min(88dvh, 860px);
+    padding: 0;
+    background: var(--fv-surface);
+    border: 1px solid rgba(255, 255, 255, .48);
+    border-radius: var(--fv-radius-panel);
+    box-shadow: 0 3px 8px rgba(16, 35, 31, .12), 0 28px 72px rgba(16, 35, 31, .24);
+}
+
+.admin-support-header {
+    min-height: 104px;
+    margin: 0;
+    padding: 22px 26px;
+    border-bottom: 1px solid var(--fv-line);
+}
+
+.admin-support-eyebrow {
+    margin: 0 0 3px;
+    color: var(--fv-accent-strong);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.admin-support-header h2 {
+    color: var(--fv-ink);
+    font-size: 24px;
+    letter-spacing: -.025em;
+}
+
+.admin-support-description {
+    margin: 4px 0 0;
+    color: var(--fv-muted);
+    font-size: 13px;
+}
+
+.admin-support-close {
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    border: 1px solid var(--fv-line);
+    border-radius: var(--fv-radius-control);
+    background: var(--fv-accent-faint);
+    color: var(--fv-ink-soft);
+    transition: background 120ms ease-out, border-color 120ms ease-out, color 120ms ease-out;
+}
+
+.admin-support-close:hover {
+    border-color: var(--fv-line-strong);
+    background: var(--fv-accent-soft);
+    color: var(--fv-ink);
+}
+
+.admin-support-workspace {
+    display: grid;
+    grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+    min-height: 0;
+    flex: 1;
+}
+
+.admin-ticket-panel {
+    display: flex;
+    min-width: 0;
+    min-height: 0;
+    padding: 18px;
+    flex-direction: column;
+    background: #dce7e3;
+    border-right: 1px solid var(--fv-line-strong);
+}
+
+.admin-ticket-search-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    padding: 0 13px;
+    border: 1px solid var(--fv-line);
+    border-radius: var(--fv-radius-control);
+    background: var(--fv-surface);
+    color: var(--fv-muted);
+}
+
+#admin-ticket-search {
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--fv-ink);
+    font-size: 13px;
+}
+
+.admin-ticket-search-wrap:focus-within {
+    border-color: var(--fv-accent);
+    box-shadow: var(--fv-focus);
+}
+
+.admin-ticket-filters {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+    margin: 14px 0 18px;
+    padding: 4px;
+    border-radius: 11px;
+    background: rgba(16, 35, 31, .07);
+}
+
+.admin-ticket-filter {
+    min-width: 0;
+    min-height: 38px;
+    padding: 7px 6px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--fv-muted);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 120ms ease-out, color 120ms ease-out, box-shadow 120ms ease-out;
+}
+
+.admin-ticket-filter span {
+    margin-left: 3px;
+    font-variant-numeric: tabular-nums;
+}
+
+.admin-ticket-filter.active {
+    background: var(--fv-surface);
+    color: var(--fv-accent-strong);
+    box-shadow: var(--fv-shadow-sm);
+}
+
+.admin-ticket-list-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    color: var(--fv-ink);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+#admin-ticket-result-count {
+    color: var(--fv-muted);
+    font-size: 11px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+}
+
+#admin-ticket-list {
+    display: flex;
+    min-height: 0;
+    padding-right: 3px;
+    flex: 1;
+    flex-direction: column;
+    gap: 8px;
+    overflow-y: auto;
+    scrollbar-color: var(--fv-line-strong) transparent;
+    scrollbar-width: thin;
+}
+
+.admin-ticket-card {
+    width: 100%;
+    padding: 13px 14px;
+    border: 1px solid var(--fv-line);
+    border-radius: 11px;
+    background: var(--fv-surface);
+    color: var(--fv-ink);
+    text-align: left;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(16, 35, 31, .04);
+    transition: border-color 140ms ease-out, box-shadow 140ms ease-out, transform 100ms ease-out;
+}
+
+.admin-ticket-card:hover {
+    border-color: var(--fv-accent);
+    box-shadow: var(--fv-shadow-sm);
+}
+
+.admin-ticket-card:active { transform: scale(.99); }
+
+.admin-ticket-card.active {
+    border-color: var(--fv-accent);
+    background: var(--fv-accent-faint);
+    box-shadow: var(--fv-focus);
+}
+
+.admin-ticket-card-header,
+.admin-ticket-card .ticket-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.admin-ticket-id,
+.admin-ticket-date {
+    color: var(--fv-muted);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+}
+
+.admin-ticket-card .ticket-subject {
+    margin: 7px 0 9px;
+    color: var(--fv-ink);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.35;
+}
+
+.admin-ticket-card .ticket-meta {
+    color: var(--fv-muted);
+    font-size: 11px;
+}
+
+.admin-ticket-card .ticket-meta > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.admin-ticket-new { color: var(--fv-accent-strong); font-weight: 600; }
+.unread-dot { width: 6px; height: 6px; margin: 0; background: var(--fv-accent); animation: none; }
+
+.admin-ticket-empty {
+    display: grid;
+    min-height: 180px;
+    place-items: center;
+    align-content: center;
+    gap: 8px;
+    padding: 24px;
+    color: var(--fv-muted);
+    text-align: center;
+}
+
+.admin-ticket-empty i { font-size: 24px; }
+.admin-ticket-empty p { max-width: 220px; margin: 0; font-size: 12px; line-height: 1.5; }
+
+.admin-ticket-error button {
+    min-height: 40px;
+    padding: 8px 14px;
+    border: 1px solid var(--fv-line);
+    border-radius: var(--fv-radius-control);
+    background: var(--fv-surface);
+    color: var(--fv-ink);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.admin-ticket-skeleton {
+    min-height: 96px;
+    border: 1px solid rgba(174, 191, 186, .55);
+    border-radius: 11px;
+    background: linear-gradient(90deg, rgba(245, 248, 246, .72), rgba(255, 255, 255, .92), rgba(245, 248, 246, .72));
+    background-size: 200% 100%;
+    animation: admin-ticket-loading 1.2s ease-in-out infinite;
+}
+
+@keyframes admin-ticket-loading {
+    from { background-position: 100% 0; }
+    to { background-position: -100% 0; }
+}
+
+.admin-chat-box {
+    width: auto;
+    max-width: none;
+    height: auto;
+    min-width: 0;
+    min-height: 0;
+    border-radius: 0;
+    background: var(--fv-canvas);
+    box-shadow: none;
+}
+
+.admin-chat-empty {
+    display: grid;
+    height: 100%;
+    place-items: center;
+    align-content: center;
+    padding: 40px;
+    color: var(--fv-muted);
+    text-align: center;
+}
+
+.admin-chat-empty-icon {
+    display: grid;
+    width: 58px;
+    height: 58px;
+    margin-bottom: 16px;
+    place-items: center;
+    border: 1px solid var(--fv-line);
+    border-radius: 18px;
+    background: var(--fv-accent-soft);
+    color: var(--fv-accent-strong);
+    font-size: 24px;
+}
+
+.admin-chat-empty h3 { margin: 0 0 6px; color: var(--fv-ink); font-size: 18px; }
+.admin-chat-empty p { max-width: 330px; margin: 0; font-size: 13px; line-height: 1.55; }
+.admin-chat-box:not(.is-empty) .admin-chat-empty { display: none; }
+.admin-chat-box.is-empty .admin-chat-content { display: none; }
+
+.admin-chat-content {
+    display: flex;
+    height: 100%;
+    min-height: 0;
+    flex-direction: column;
+}
+
+.admin-chat-header {
+    align-items: center;
+    padding: 18px 22px;
+    border-color: var(--fv-line);
+    background: var(--fv-surface);
+}
+
+.admin-chat-heading { min-width: 0; flex: 1; }
+
+.admin-chat-status {
+    display: inline-flex;
+    margin-bottom: 5px;
+    color: var(--fv-accent-strong);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.admin-chat-status.is-closed { color: var(--fv-muted); }
+
+.admin-chat-header h3 {
+    margin: 0 0 3px;
+    overflow: hidden;
+    color: var(--fv-ink);
+    font-size: 16px;
+    letter-spacing: -.015em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.admin-chat-subtitle { color: var(--fv-muted); font-size: 12px; }
+
+.btn-cerrar-ticket {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 40px;
+    border-color: var(--fv-line);
+    border-radius: var(--fv-radius-control);
+    background: var(--fv-accent-faint);
+    color: var(--fv-ink-soft);
+    transition: background 120ms ease-out, border-color 120ms ease-out;
+}
+
+.btn-cerrar-ticket:hover { border-color: var(--fv-accent); background: var(--fv-accent-soft); }
+.admin-chat-back { display: none; }
+
+.admin-chat-messages {
+    padding: 22px clamp(18px, 3vw, 34px);
+    gap: 12px;
+    background: var(--fv-canvas);
+    scrollbar-color: var(--fv-line-strong) transparent;
+    scrollbar-width: thin;
+}
+
+.admin-chat-messages .message {
+    max-width: min(72%, 620px);
+    padding: 11px 14px 8px;
+    border-radius: var(--fv-radius-card);
+    font-size: 13px;
+    line-height: 1.5;
+    box-shadow: 0 1px 2px rgba(16, 35, 31, .04);
+}
+
+.admin-chat-messages .message p { margin: 0; white-space: pre-wrap; }
+.admin-chat-messages .message time { display: block; margin-top: 5px; font-size: 10px; opacity: .68; text-align: right; }
+
+.admin-chat-messages .message.user {
+    border-color: var(--fv-line);
+    background: var(--fv-surface);
+    color: var(--fv-ink);
+}
+
+.admin-chat-messages .message.admin {
+    background: var(--fv-accent);
+    color: white;
+}
+
+.admin-chat-input {
+    min-height: 76px;
+    padding: 14px 18px;
+    border-color: var(--fv-line);
+    background: var(--fv-surface);
+}
+
+.admin-chat-input input {
+    min-width: 0;
+    min-height: 46px;
+    padding: 11px 14px;
+    border-color: var(--fv-line);
+    border-radius: var(--fv-radius-control);
+    background: var(--fv-accent-faint);
+    color: var(--fv-ink);
+    font-size: 14px;
+    outline: 0;
+}
+
+.admin-chat-input input:focus { border-color: var(--fv-accent); box-shadow: var(--fv-focus); }
+
+.admin-chat-input button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-width: 108px;
+    min-height: 46px;
+    padding: 0 18px;
+    border-radius: var(--fv-radius-control);
+    background: var(--fv-accent);
+    transition: background 120ms ease-out, transform 100ms ease-out;
+}
+
+.admin-chat-input button:hover { background: var(--fv-accent-strong); }
+.admin-chat-input button:active { transform: scale(.98); }
+
+@media (max-width: 800px) {
+    #admin-support-modal { padding: 8px; }
+    .admin-support-box { height: calc(100dvh - 16px); border-radius: 16px; }
+    .admin-support-header { min-height: 92px; padding: 18px; }
+    .admin-support-header h2 { font-size: 21px; }
+    .admin-support-description { display: none; }
+    .admin-support-workspace { display: block; position: relative; overflow: hidden; }
+    .admin-ticket-panel, .admin-chat-box { position: absolute; inset: 0; }
+    .admin-ticket-panel { padding: 14px; border-right: 0; }
+    .admin-chat-box { display: none; }
+    #admin-support-modal.chat-visible .admin-ticket-panel { display: none; }
+    #admin-support-modal.chat-visible .admin-chat-box { display: flex; }
+    .admin-chat-back {
+        display: grid;
+        width: 40px;
+        height: 40px;
+        margin-right: 10px;
+        place-items: center;
+        flex: 0 0 40px;
+        border: 1px solid var(--fv-line);
+        border-radius: var(--fv-radius-control);
+        background: var(--fv-accent-faint);
+        color: var(--fv-ink);
+    }
+    .admin-chat-header { padding: 14px; }
+    .admin-chat-header-actions { margin-left: 8px; }
+    .btn-cerrar-ticket { width: 40px; padding: 0; justify-content: center; }
+    .btn-cerrar-ticket { font-size: 0; }
+    .btn-cerrar-ticket i { font-size: 17px; }
+    .admin-chat-messages .message { max-width: 88%; }
+    .admin-chat-input { padding: 10px; }
+    .admin-chat-input button { min-width: 46px; width: 46px; padding: 0; }
+    .admin-chat-input button span { display: none; }
+}
+
+@media (max-width: 380px) {
+    .admin-ticket-filter { font-size: 10px; }
+    .admin-support-header { padding-inline: 14px; }
+}

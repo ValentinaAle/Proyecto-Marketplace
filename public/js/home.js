@@ -196,84 +196,127 @@ function configurarBtnSoporte() {
 
 function closeAdminSupportModal() {
   document.getElementById('admin-support-modal').classList.remove('visible');
+  closeAdminChatModal();
   if (pollingListaAdmin) {
     clearInterval(pollingListaAdmin);
     pollingListaAdmin = null;
   }
 }
 let todosLosTicketsAdmin = [];
+let filtroTicketsAdmin = 'unread';
 
 async function cargarTicketsAdmin() {
+  const list = document.getElementById('admin-ticket-list');
+  if (list && todosLosTicketsAdmin.length === 0) {
+    list.innerHTML = `
+      <div class="admin-ticket-skeleton"></div>
+      <div class="admin-ticket-skeleton"></div>
+      <div class="admin-ticket-skeleton"></div>`;
+  }
   try {
     const token = getToken();
     const res = await fetch('/api/support/admin/tickets', {
       headers: { Authorization: `Bearer ${token}` },
     });
+    if (!res.ok) throw new Error('No se pudieron cargar las consultas.');
     const data = await res.json();
     todosLosTicketsAdmin = data.data || [];
     renderTicketsAdmin(todosLosTicketsAdmin);
   } catch (err) {
     console.error('Error al cargar tickets admin:', err);
+    if (list) {
+      list.innerHTML = `
+        <div class="admin-ticket-empty admin-ticket-error">
+          <i class="bi bi-exclamation-circle"></i>
+          <p>No pudimos cargar las consultas.</p>
+          <button type="button" onclick="cargarTicketsAdmin()">Reintentar</button>
+        </div>`;
+    }
   }
 }
 
+function escaparHtml(value = '') {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
 function renderTicketsAdmin(tickets) {
-  const unread = tickets.filter(t => Number(t.admin_replies) === 0 && t.status === 'OPEN');
-  const open = tickets.filter(t => Number(t.admin_replies) > 0 && t.status === 'OPEN');
-  const closed = tickets.filter(t => t.status === 'CLOSED');
+  const source = todosLosTicketsAdmin.length || tickets.length === 0 ? todosLosTicketsAdmin : tickets;
+  const unread = source.filter(t => Number(t.admin_replies) === 0 && t.status === 'OPEN');
+  const open = source.filter(t => Number(t.admin_replies) > 0 && t.status === 'OPEN');
+  const closed = source.filter(t => t.status === 'CLOSED');
 
   document.getElementById('count-unread').textContent = unread.length;
   document.getElementById('count-open').textContent = open.length;
   document.getElementById('count-closed').textContent = closed.length;
 
-  renderColumnaAdmin('ticket-list-unread', unread, true);
-  renderColumnaAdmin('ticket-list-open', open, true);
-  renderColumnaAdmin('ticket-list-closed', closed, false);
-}
+  const query = document.getElementById('admin-ticket-search')?.value.trim().toLowerCase() || '';
+  const groups = { unread, open, closed };
+  const labels = { unread: 'Sin responder', open: 'Abiertos', closed: 'Cerrados' };
+  const visibles = (groups[filtroTicketsAdmin] || unread).filter(ticket =>
+    !query ||
+    String(ticket.id_ticket).includes(query) ||
+    (ticket.subject || '').toLowerCase().includes(query) ||
+    (ticket.user_name || '').toLowerCase().includes(query)
+  );
 
-function renderColumnaAdmin(containerId, tickets, mostrarUnread) {
-  const list = document.getElementById(containerId);
+  const list = document.getElementById('admin-ticket-list');
   if (!list) return;
+  document.getElementById('admin-ticket-list-title').textContent = labels[filtroTicketsAdmin];
+  document.getElementById('admin-ticket-result-count').textContent =
+    `${visibles.length} ${visibles.length === 1 ? 'consulta' : 'consultas'}`;
   list.innerHTML = '';
 
-  if (tickets.length === 0) {
-    list.innerHTML = `<p style="color:#9ba5b3;font-size:13px;">Sin tickets</p>`;
+  if (visibles.length === 0) {
+    list.innerHTML = `
+      <div class="admin-ticket-empty">
+        <i class="bi bi-inbox"></i>
+        <p>${query ? 'No encontramos consultas con esa búsqueda.' : 'No hay consultas en este estado.'}</p>
+      </div>`;
     return;
   }
 
-  tickets.forEach(ticket => {
+  visibles.forEach(ticket => {
     const fecha = new Date(ticket.created_at).toLocaleDateString('es-AR');
-    const tieneNoLeidos = mostrarUnread && Number(ticket.admin_unread_count) > 0;
+    const tieneNoLeidos = Number(ticket.admin_unread_count) > 0;
+    const estaActivo = Number(ticketActivoAdminId) === Number(ticket.id_ticket);
 
-    const card = document.createElement('div');
-    card.className = 'admin-ticket-card';
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = `admin-ticket-card${estaActivo ? ' active' : ''}`;
+    card.setAttribute('aria-pressed', String(estaActivo));
     card.innerHTML = `
       <div class="admin-ticket-card-header">
-        <h4>
-          #${ticket.id_ticket}
-          ${tieneNoLeidos ? `<span class="unread-dot" title="Nuevo mensaje"></span>` : ''}
-        </h4>
-        <button class="btn-ver">Ver</button>
+        <span class="admin-ticket-id">#${ticket.id_ticket}</span>
+        <span class="admin-ticket-date">${fecha}</span>
       </div>
-      <p class="ticket-subject">${ticket.subject || 'Sin asunto'}</p>
+      <p class="ticket-subject">${escaparHtml(ticket.subject || 'Sin asunto')}</p>
       <div class="ticket-meta">
-        <span>${ticket.user_name}</span>
-        <span>${fecha}</span>
+        <span><i class="bi bi-person"></i>${escaparHtml(ticket.user_name || 'Usuario')}</span>
+        ${tieneNoLeidos ? `<span class="admin-ticket-new"><span class="unread-dot"></span>Nuevo</span>` : ''}
       </div>
     `;
-    card.querySelector('.btn-ver').addEventListener('click', () => abrirTicketAdmin(ticket));
+    card.addEventListener('click', () => abrirTicketAdmin(ticket));
     list.appendChild(card);
   });
 }
 
 function filtrarTicketsAdmin() {
-  const query = document.getElementById('admin-ticket-search').value.trim().toLowerCase();
-  const filtrados = todosLosTicketsAdmin.filter(t =>
-    String(t.id_ticket).includes(query) ||
-    (t.subject || '').toLowerCase().includes(query) ||
-    (t.user_name || '').toLowerCase().includes(query)
-  );
-  renderTicketsAdmin(filtrados);
+  renderTicketsAdmin(todosLosTicketsAdmin);
+}
+
+function cambiarFiltroTicketsAdmin(filter, button) {
+  filtroTicketsAdmin = filter;
+  document.querySelectorAll('.admin-ticket-filter').forEach(item => {
+    const active = item === button;
+    item.classList.toggle('active', active);
+    item.setAttribute('aria-selected', String(active));
+  });
+  renderTicketsAdmin(todosLosTicketsAdmin);
 }
 
 let ticketActivoAdminId = null;
@@ -290,10 +333,15 @@ async function abrirTicketAdmin(ticket) {
 
   document.getElementById('btn-cerrar-ticket-admin').style.display =
     ticket.status === 'OPEN' ? 'inline-flex' : 'none';
+  const status = document.getElementById('admin-chat-status');
+  status.textContent = ticket.status === 'CLOSED' ? 'Cerrado' : 'Abierto';
+  status.classList.toggle('is-closed', ticket.status === 'CLOSED');
 
   aplicarEstadoInputAdmin(ticket.status);
 
-  document.getElementById('admin-chat-modal').classList.add('visible');
+  document.getElementById('admin-chat-panel').classList.remove('is-empty');
+  document.getElementById('admin-support-modal').classList.add('chat-visible');
+  renderTicketsAdmin(todosLosTicketsAdmin);
 
   // Marcar como leído por admin
   try {
@@ -315,7 +363,7 @@ async function abrirTicketAdmin(ticket) {
 function aplicarEstadoInputAdmin(status) {
   const cerrado = status === 'CLOSED';
   const inputAdmin = document.getElementById('admin-chat-input-msg');
-  const chatInputAdminBox = document.querySelector('#admin-chat-modal .admin-chat-input');
+  const chatInputAdminBox = document.querySelector('#admin-support-modal .admin-chat-input');
   inputAdmin.disabled = cerrado;
   inputAdmin.placeholder = cerrado ? 'Este ticket está cerrado' : 'Escribí tu respuesta...';
   chatInputAdminBox.querySelector('button').disabled = cerrado;
@@ -336,6 +384,9 @@ async function actualizarTicketAbiertoAdmin(id) {
 
     document.getElementById('btn-cerrar-ticket-admin').style.display =
       ticket.status === 'OPEN' ? 'inline-flex' : 'none';
+    const status = document.getElementById('admin-chat-status');
+    status.textContent = ticket.status === 'CLOSED' ? 'Cerrado' : 'Abierto';
+    status.classList.toggle('is-closed', ticket.status === 'CLOSED');
     aplicarEstadoInputAdmin(ticket.status);
     todosLosTicketsAdmin = tickets;
     renderTicketsAdmin(tickets);
@@ -347,8 +398,10 @@ async function actualizarTicketAbiertoAdmin(id) {
 }
 
 function closeAdminChatModal() {
-  document.getElementById('admin-chat-modal').classList.remove('visible');
+  document.getElementById('admin-support-modal').classList.remove('chat-visible');
+  document.getElementById('admin-chat-panel')?.classList.add('is-empty');
   ticketActivoAdminId = null;
+  renderTicketsAdmin(todosLosTicketsAdmin);
   if (pollingAdmin) {
     clearInterval(pollingAdmin);
     pollingAdmin = null;
@@ -385,7 +438,15 @@ function renderMensajesAdmin(messages) {
     const esDelAdmin = Number(msg.id_user) === Number(user.id_user);
     const div = document.createElement('div');
     div.className = `message ${esDelAdmin ? 'admin' : 'user'}`;
-    div.textContent = msg.message;
+    const text = document.createElement('p');
+    text.textContent = msg.message;
+    div.appendChild(text);
+    if (msg.created_at) {
+      const time = document.createElement('time');
+      time.dateTime = msg.created_at;
+      time.textContent = new Date(msg.created_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+      div.appendChild(time);
+    }
     container.appendChild(div);
   });
 
@@ -430,6 +491,10 @@ async function cerrarTicketAdmin() {
     const data = await res.json();
     if (data.ok) {
       document.getElementById('btn-cerrar-ticket-admin').style.display = 'none';
+      const status = document.getElementById('admin-chat-status');
+      status.textContent = 'Cerrado';
+      status.classList.add('is-closed');
+      aplicarEstadoInputAdmin('CLOSED');
       mostrarToast('Ticket cerrado ✅');
       await cargarTicketsAdmin();
     }
