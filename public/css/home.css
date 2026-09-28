@@ -911,13 +911,14 @@ body::-webkit-scrollbar,
     gap: 9px;
     min-height: 44px;
     padding: 11px 13px;
-    border-radius: var(--fv-radius-control);
-    background: transparent;
+    border: 1px solid rgba(255, 255, 255, .16);
+    border-radius: 11px;
+    background: rgba(255, 255, 255, .20);
     color: rgba(255, 255, 255, .84);
     font-size: 13px;
     font-weight: 500;
     white-space: nowrap;
-    transition: color 150ms ease-out, background 150ms ease-out, transform 100ms ease-out;
+    transition: color 150ms ease-out, background 150ms ease-out, border-color 150ms ease-out, transform 100ms ease-out;
 }
 
 .menu button i {
@@ -928,12 +929,13 @@ body::-webkit-scrollbar,
 }
 
 .menu button:hover {
-    background: rgba(255, 255, 255, .14);
+    border-color: rgba(255, 255, 255, .20);
+    background: rgba(255, 255, 255, .12);
     color: white;
 }
 
 .menu button:active { transform: scale(.985); }
-.menu button.menu-active { background: var(--fv-surface); color: var(--fv-accent-strong); box-shadow: var(--fv-shadow-sm); }
+.menu button.menu-active { border-color: rgba(255, 255, 255, .72); background: var(--fv-surface); color: var(--fv-accent-strong); box-shadow: var(--fv-shadow-sm); }
 .menu button.menu-active::before {
     content: "";
     position: absolute;
@@ -947,10 +949,11 @@ body::-webkit-scrollbar,
 
 .menu .logout-btn {
     margin-top: 12px;
-    background: transparent !important;
-    color: #ffe1e3;
+    border-color: rgba(255, 225, 227, .55);
+    background: #d96b72 !important;
+    color: white;
 }
-.menu .logout-btn:hover { background: rgba(255, 240, 241, .15) !important; color: white; }
+.menu .logout-btn:hover { border-color: rgba(255, 225, 227, .7); background: #c95860 !important; color: white; }
 .sidebar :focus-visible { outline-color: white; }
 
 .main { background: var(--fv-canvas); }
