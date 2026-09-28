@@ -5,14 +5,23 @@ document.addEventListener('DOMContentLoaded', () => {
   init();
 });
 
+// Safari y otros navegadores pueden restaurar una página completa desde el
+// back-forward cache. Se vuelve a validar la sesión antes de mostrarla.
+window.addEventListener('pageshow', async (event) => {
+  if (!event.persisted) return;
+
+  document.documentElement.classList.add('auth-pending');
+  if (await validarSesion()) {
+    document.documentElement.classList.remove('auth-pending');
+  }
+});
+
 async function init() {
-  const token = getToken();
-  console.log('Token encontrado:', token);
-  
-  if (!token) {
-    window.location.href = '/';
+  if (!await validarSesion()) {
     return;
   }
+
+  document.documentElement.classList.remove('auth-pending');
 
   configurarLogout();
   configurarCategorias();
@@ -41,13 +50,45 @@ function clearAuth() {
   sessionStorage.removeItem('fivox_user');
 }
 
+function redirigirAlLogin() {
+  document.documentElement.classList.add('auth-pending');
+  clearAuth();
+  // replace evita conservar la pantalla privada como entrada navegable.
+  window.location.replace('/login');
+}
+
+async function validarSesion() {
+  const token = getToken();
+  if (!token) {
+    redirigirAlLogin();
+    return false;
+  }
+
+  try {
+    const response = await fetch('/api/auth/me', {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      redirigirAlLogin();
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('No se pudo validar la sesión:', error);
+    redirigirAlLogin();
+    return false;
+  }
+}
+
 function configurarLogout() {
   const btnLogout = document.getElementById('btn-logout');
   if (!btnLogout) return;
 
   btnLogout.addEventListener('click', () => {
-    clearAuth();
-    window.location.href = '/';
+    redirigirAlLogin();
   });
 }
 
