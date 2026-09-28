@@ -277,8 +277,10 @@ BEGIN
     SELECT 
         t.*,
         p.name AS user_name,
-        (SELECT COUNT(*) FROM support_messages sm 
-         WHERE sm.id_ticket = t.id_ticket AND sm.id_user = 1) AS admin_replies,
+        (SELECT COUNT(*) FROM support_messages sm
+         INNER JOIN users_roles ur ON ur.id_user = sm.id_user
+         INNER JOIN roles r ON r.id_role = ur.id_role
+         WHERE sm.id_ticket = t.id_ticket AND r.name = 'ADMIN') AS admin_replies,
         (SELECT COUNT(*) FROM support_messages sm 
          WHERE sm.id_ticket = t.id_ticket 
          AND sm.id_user != 1
@@ -744,5 +746,4 @@ DELIMITER ;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
 -- Dump completed on 2026-09-28 11:36:22
-
 
