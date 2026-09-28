@@ -3,7 +3,7 @@
 #chatbot-toggle {
     position: fixed;
     bottom: 28px;
-    right: 28px;
+    right: calc(max(18px, (100vw - 1400px) / 2) + 24px);
     width: 56px;
     height: 56px;
     border-radius: 50%;
@@ -33,7 +33,7 @@
 #chatbot-window {
     position: fixed;
     bottom: 96px;
-    right: 28px;
+    right: calc(max(18px, (100vw - 1400px) / 2) + 24px);
     width: 360px;
     max-height: 520px;
     background: white;
@@ -116,15 +116,23 @@
     flex-direction: column;
     gap: 10px;
     background: #f8fafc;
+    scrollbar-width: none;
 }
 
 #chatbot-messages::-webkit-scrollbar {
-    width: 4px;
+    display: none;
 }
 
 #chatbot-messages::-webkit-scrollbar-thumb {
     background: #dbe4ef;
     border-radius: 4px;
+}
+
+@media (max-width: 900px) {
+    #chatbot-toggle,
+    #chatbot-window {
+        right: 18px;
+    }
 }
 
 .chatbot-msg {
