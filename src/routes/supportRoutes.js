@@ -64,8 +64,6 @@ router.post('/tickets/:id/messages', authMiddleware, async (req, res) => {
   }
 });
 
-module.exports = router;
-
 // GET /api/support/admin/tickets — todos los tickets (admin)
 router.get('/admin/tickets', authMiddleware, requireAdmin, async (req, res) => {
   try {
@@ -115,3 +113,5 @@ router.put('/tickets/:id/read-admin', authMiddleware, requireAdmin, async (req, 
     return res.status(500).json({ ok: false });
   }
 });
+
+module.exports = router;

@@ -8,4 +8,5 @@ ALTER TABLE users
 
 ALTER TABLE support_tickets
   ADD COLUMN last_read_at DATETIME NULL,
-  ADD COLUMN last_read_admin_at DATETIME NULL;
+  ADD COLUMN last_read_admin_at DATETIME NULL,
+  ADD COLUMN last_message_at DATETIME NULL;
