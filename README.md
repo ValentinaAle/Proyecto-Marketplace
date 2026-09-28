@@ -1,147 +1,95 @@
-Autenticación (login/registro):
+# FIVOX — Marketplace
 
-Objetivo: Permitir a los usuarios registrarse e iniciar sesión de forma segura para acceder a la aplicación.
+Proyecto con frontend HTML/CSS/JavaScript, backend Node.js/Express y MySQL.
 
-Alcance: Registro de usuarios, inicio de sesión, validación de credenciales, generación de sesión.
+## Ejecutar con Docker
 
-Contexto: Se utiliza en el acceso inicial a la aplicación. Es obligatorio para cualquier funcionalidad protegida como publicaciones, perfil o soporte.
+Se necesita Docker Desktop iniciado, con contenedores Linux y Docker Compose.
+No hace falta instalar Node.js ni MySQL en la computadora.
 
-Requisitos funcionales: Permitir registro con email y contraseña, Permitir login con credenciales válidas, Validar que el email no esté duplicado, Generar token de sesión, Permitir logout.
+El export de MySQL está incluido en `database/init/`. Contiene tablas, datos de
+prueba y procedimientos almacenados. La inicialización también agrega las
+columnas que ya necesita el backend para recuperación de contraseña y tickets.
 
-Requisitos no funcionales: Escalabilidad (soportar múltiples usuarios concurrentes), Usabilidad (mensajes claros de error), Seguridad (contraseñas hasheadas ), Diseño responsive.
+Desde una terminal PowerShell en la carpeta del proyecto:
 
-Interfaz del componente: inputs (email, contraseña, etc), outputs (mensajes de error), evento (login exitoso y fallido, y registro exitoso).
+```powershell
+Copy-Item .env.docker.example .env.docker
+docker compose --env-file .env.docker up --build -d
+```
 
-Reglas del negocio: Todo usuario nuevo se registra como usuario, No se permite login sin credenciales válidas, El email debe ser único, El token expira luego de cierto tiempo.
+Copiar el archivo de configuración solo la primera vez. Los valores de ejemplo
+son para uso local. `.env.docker` está excluido de Git; el `.env` que ya usabas
+para ejecutar con Node no necesita modificarse.
 
-Arquitectura técnica: Frontend (React + HTML), Backend: Node.js + Express, Autenticación: JWT, Seguridad: bcrypt para contraseñas, Base de datos: tabla USERS (SQL SMS). 
+Abrir **http://localhost:8080**. Para cambiar el puerto, editar `FRONTEND_PORT`
+en `.env.docker` y ejecutar nuevamente el comando de inicio.
 
-Repositorio: app-frontend, app-backend, app-database.
+### Qué se ejecuta
 
-Flujo: Front envía datos, Backend valida, Backend consulta DB, Backend responde con token.
+| Servicio | Función | Puerto dentro de Docker |
+| --- | --- | --- |
+| `frontend` | Nginx sirve las páginas y envía `/api/` al backend | 80 |
+| `backend` | Node.js ejecuta la API Express | 3000 |
+| `database` | MySQL 8.4 guarda los datos | 3306 |
 
-Dependencias: Base datos USERS, libreria JWT, libreria bcrypt, API backend.
+Solo el frontend se publica en la computadora, en `localhost:8080`. El backend
+se conecta a MySQL usando el nombre `database`. Los datos se conservan en el
+volumen `mysql_data` al detener los contenedores.
 
-Casos de uso: Usuario se registra correctamente, Usuario inicia sesión correctamente, Usuario ingresa contraseña incorrecta
+Compose espera a que MySQL acepte conexiones antes de iniciar el backend, y a
+que el backend responda antes de iniciar el frontend.
 
-Casos borde: Email vacío, Contraseña vacía, Email ya registrado, Usuario inexistente, Token inválido o expirado.
+### Comprobar el funcionamiento
 
-Criterios de aceptación: Registro exitoso crea usuario en DB, Login válido devuelve token, Login inválido devuelve error, Contraseña nunca se guarda en texto plano.
+```powershell
+docker compose --env-file .env.docker ps
+docker compose --env-file .env.docker logs --tail=100
+Invoke-RestMethod http://localhost:8080/api/health
+```
 
-Estrategia de pruebas: Test de registro, Test de login, Test de errores, Test de seguridad (password hash).
+El endpoint de salud comprueba la conexión a MySQL. No comprueba que estén
+importadas todas las tablas y rutinas. Con el SQL importado, verificar también
+el registro de una cuenta, el login y la carga de categorías/publicaciones.
 
-Riesgos: Vulnerabilidades de seguridad, Mala gestión de tokens, Anexos.
+### Detener y volver a iniciar
 
-Endpoints: POST /register, POST /login.
+```powershell
+docker compose --env-file .env.docker down
+docker compose --env-file .env.docker up -d
+```
 
+Después de modificar código, reconstruir las imágenes:
 
-Publicaciones:
+```powershell
+docker compose --env-file .env.docker up --build -d
+```
 
-Objetivo: Permitir a los usuarios crear, visualizar y gestionar publicaciones con contenido e imágenes.
+### Importar el SQL desde cero
 
-Alcance: Creación de publicaciones, visualización de listado, visualización de detalle, eliminación de publicaciones.
+MySQL carga `database/init/*.sql` únicamente cuando el volumen está vacío.
+Si ya iniciaste los servicios antes de agregar o modificar el SQL, **solo si
+podés borrar los datos de esa base local**, ejecutar:
 
-Contexto: Se utiliza dentro de la aplicación una vez que el usuario está autenticado. Es una funcionalidad principal para compartir contenido.
+```powershell
+docker compose --env-file .env.docker down -v
+docker compose --env-file .env.docker up --build -d
+```
 
-Requisitos funcionales: Permitir crear publicaciones con título y descripción, Permitir adjuntar imagen, Mostrar listado de publicaciones, Mostrar detalle de una publicación, Permitir eliminar publicaciones propias.
+`down -v` elimina todos los datos del volumen de este proyecto. Para conservar
+datos existentes, realizar un respaldo e importar el SQL manualmente en lugar
+de eliminar el volumen. Cambiar las credenciales en `.env.docker` tampoco cambia
+los usuarios de una base que ya fue inicializada.
 
-Requisitos no funcionales: Escalabilidad (soportar múltiples publicaciones concurrentes), Performance (carga rápida de imágenes), Usabilidad (interfaz clara), Diseño responsive.
+### Recuperación por correo
 
-Interfaz del componente: inputs (título, descripción, imagen), outputs (mensaje de éxito o error), evento (publicación creada, eliminada).
+Configurar `EMAIL_USER` y `EMAIL_PASS` en `.env.docker` para usar la recuperación
+de contraseña. El código actual utiliza Gmail; `EMAIL_PASS` debe ser la
+contraseña de aplicación de esa cuenta. El resto de la app puede usarse sin
+configurar correo. Las fuentes, Bootstrap y otros recursos CDN del frontend
+requieren conexión a Internet.
 
-Reglas del negocio: Solo usuarios autenticados pueden crear publicaciones, El título y descripción son obligatorios, Un usuario solo puede eliminar sus propias publicaciones, Las imágenes deben cumplir formato válido.
+## Ejecución sin Docker
 
-Arquitectura técnica: Frontend (React + HTML), Backend (Node.js + Express), Manejo de imágenes (Multer o Cloudinary), Base de datos (tabla POSTS en SQL).
-
-Repositorio: app-frontend, app-backend, app-database.
-
-Flujo: Front envía datos de publicación, Backend valida, Backend guarda en DB, Backend responde con confirmación.
-
-Dependencias: Base de datos POSTS, API backend, librería de subida de imágenes.
-
-Casos de uso: Usuario crea publicación correctamente, Usuario visualiza publicaciones, Usuario elimina una publicación.
-
-Casos borde: Campos vacíos, Imagen inválida, Error al subir imagen, Usuario intenta eliminar publicación ajena.
-
-Criterios de aceptación: Publicación válida se guarda en DB, Publicación aparece en listado, Error si faltan datos obligatorios, Solo autor puede eliminar.
-
-Estrategia de pruebas: Test de creación, Test de listado, Test de eliminación, Test de validación de datos.
-
-Riesgos: Pérdida de imágenes, Problemas de carga, Datos inconsistentes.
-
-Endpoints: POST /posts, GET /posts, DELETE /posts/:id
-
-Soporte (Tickets)
-
-Objetivo: Permitir la comunicación entre usuarios y administradores mediante un sistema de tickets.
-
-Alcance: Creación de tickets, envío de mensajes, visualización de conversaciones, respuesta por parte de administradores.
-
-Contexto: Se utiliza cuando un usuario necesita asistencia. Forma parte del sistema de ayuda de la aplicación.
-
-Requisitos funcionales: Permitir crear ticket, Permitir enviar mensajes dentro del ticket, Permitir respuestas de administrador, Mostrar historial de conversación.
-
-Requisitos no funcionales: Escalabilidad (soportar múltiples conversaciones), Usabilidad (interfaz tipo chat clara), Persistencia (guardar mensajes), Diseño responsive.
-
-Interfaz del componente: inputs (mensaje), outputs (mensajes enviados/recibidos), evento (mensaje enviado, respuesta recibida).
-
-Reglas del negocio: Solo usuarios autenticados pueden crear tickets, Un ticket pertenece a un usuario, Los mensajes quedan almacenados, Solo admin puede cerrar tickets.
-
-Arquitectura técnica: Frontend (React + HTML), Backend (Node.js + Express), Base de datos (tablas SUPPORT_TICKETS y SUPPORT_MESSAGES).
-
-Repositorio: app-frontend, app-backend, app-database.
-
-Flujo: Usuario crea ticket, Backend guarda ticket, Usuario/admin envían mensajes, Backend almacena mensajes y los devuelve.
-
-Dependencias: Base de datos (tickets y mensajes), API backend.
-
-Casos de uso: Usuario crea ticket, Usuario envía mensaje, Admin responde ticket, Usuario visualiza historial.
-
-Casos borde: Mensaje vacío, Ticket inexistente, Usuario sin permisos, Error de conexión.
-
-Criterios de aceptación: Ticket se guarda correctamente, Mensajes se almacenan, Admin puede responder, Historial se muestra completo.
-
-Estrategia de pruebas: Test de creación de ticket, Test de envío de mensajes, Test de respuesta de admin, Test de historial.
-
-Riesgos: Pérdida de mensajes, Problemas de sincronización, Sobrecarga de mensajes.
-
-Endpoints: POST /tickets, GET /tickets, POST /messages
-
-
-
-
-Perfil
-
-Objetivo: Permitir a los usuarios visualizar y actualizar su información personal.
-
-Alcance: Visualización de perfil, edición de nombre, carga de foto, cambio de contraseña.
-
-Contexto: Se utiliza dentro de la sesión del usuario para gestionar sus datos personales.
-
-Requisitos funcionales: Mostrar datos del usuario, Permitir editar nombre, Permitir subir o cambiar foto, Permitir cambiar contraseña.
-
-Requisitos no funcionales: Seguridad (protección de datos), Usabilidad (interfaz clara), Performance (carga rápida de datos), Diseño responsive.
-
-Interfaz del componente: inputs (nombre, foto, contraseña), outputs (confirmación o error), evento (perfil actualizado).
-
-Reglas del negocio: Solo el usuario puede editar su perfil, La contraseña debe actualizarse de forma segura, La foto debe ser válida.
-
-Arquitectura técnica: Frontend (React + HTML), Backend (Node.js + Express), Base de datos (tabla PROFILES), Manejo de imágenes (Cloudinary o almacenamiento local).
-
-Repositorio: app-frontend, app-backend, app-database.
-
-Flujo: Usuario solicita perfil, Backend devuelve datos, Usuario envía cambios, Backend valida y actualiza DB.
-
-Dependencias: Base de datos PROFILES, API backend, librería de imágenes.
-
-Casos de uso: Usuario visualiza perfil, Usuario actualiza nombre, Usuario cambia contraseña, Usuario actualiza foto.
-
-Casos borde: Datos vacíos, Imagen inválida, Error al actualizar, Contraseña insegura.
-
-Criterios de aceptación: Perfil se muestra correctamente, Cambios se guardan en DB, Contraseña se actualiza de forma segura, Mensajes de error claros.
-
-Estrategia de pruebas: Test de visualización, Test de edición, Test de cambio de contraseña, Test de validaciones.
-
-Riesgos: Exposición de datos sensibles, Fallos en actualización, Problemas con imágenes.
-
-Endpoints: GET /profile, PUT /profile, PUT /profile/password
+Se conserva la ejecución original con `npm install` y `npm start`, usando las
+variables de conexión y JWT de `.env` y una base MySQL ya configurada.
