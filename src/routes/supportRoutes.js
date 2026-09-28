@@ -4,6 +4,17 @@ const authMiddleware = require('../middlewares/auth');
 const requireAdmin   = require('../middlewares/requireAdmin');
 const pool           = require('../config/db');
 
+const ensureTicketAccess = async (ticketId, userId) => {
+  const [rows] = await pool.execute(
+    `SELECT t.id_ticket, t.id_user,
+      EXISTS(SELECT 1 FROM users_roles ur INNER JOIN roles r ON r.id_role = ur.id_role
+             WHERE ur.id_user = ? AND r.name = 'ADMIN') AS is_admin
+     FROM support_tickets t WHERE t.id_ticket = ?`,
+    [userId, ticketId]
+  );
+  return rows[0] && (rows[0].id_user === userId || rows[0].is_admin === 1);
+};
+
 // GET /api/support/tickets — tickets del usuario
 router.get('/tickets', authMiddleware, async (req, res) => {
   try {
@@ -42,6 +53,9 @@ router.post('/tickets', authMiddleware, async (req, res) => {
 // GET /api/support/tickets/:id/messages — mensajes de un ticket
 router.get('/tickets/:id/messages', authMiddleware, async (req, res) => {
   try {
+    if (!await ensureTicketAccess(req.params.id, req.user.id_user)) {
+      return res.status(404).json({ ok: false, message: 'Ticket no encontrado.' });
+    }
     const [rows] = await pool.execute('CALL sp_get_messages(?)', [req.params.id]);
     return res.status(200).json({ ok: true, data: rows[0] });
   } catch (error) {
@@ -56,6 +70,9 @@ router.post('/tickets/:id/messages', authMiddleware, async (req, res) => {
   if (!message) return res.status(400).json({ ok: false, message: 'El mensaje es requerido.' });
 
   try {
+    if (!await ensureTicketAccess(req.params.id, req.user.id_user)) {
+      return res.status(404).json({ ok: false, message: 'Ticket no encontrado.' });
+    }
     await pool.execute('CALL sp_create_message(?, ?, ?)', [message, req.params.id, req.user.id_user]);
     return res.status(201).json({ ok: true, message: 'Mensaje enviado.' });
   } catch (error) {
