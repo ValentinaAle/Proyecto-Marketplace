@@ -928,6 +928,8 @@ body::-webkit-scrollbar,
     text-align: center;
 }
 
+#btn-terms i { transform: translateX(2px); }
+
 .menu button:hover {
     background: rgba(255, 255, 255, .12);
     color: white;
@@ -1130,6 +1132,7 @@ body::-webkit-scrollbar,
     .menu::-webkit-scrollbar { display: none; }
     .menu button { width: 44px; min-width: 44px; padding: 10px; justify-content: center; gap: 0; font-size: 0; text-align: center; }
     .menu button i { margin: 0 !important; font-size: 17px; }
+    #btn-terms i { transform: none; }
     .menu button.menu-active::before { left: 12px; right: 12px; top: auto; bottom: -4px; width: auto; height: 3px; }
     .menu .logout-btn { margin-top: 0; }
     .main { overflow: visible; }
