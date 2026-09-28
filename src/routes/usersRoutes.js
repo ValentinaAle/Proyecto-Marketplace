@@ -1,10 +1,11 @@
 const express        = require('express');
 const router         = express.Router();
 const authMiddleware = require('../middlewares/auth');
+const requireAdmin   = require('../middlewares/requireAdmin');
 const pool           = require('../config/db');
 
 // GET /api/users — usuarios con posts
-router.get('/', authMiddleware, async (req, res) => {
+router.get('/', authMiddleware, requireAdmin, async (req, res) => {
   try {
     const [rows] = await pool.execute('CALL sp_get_users_with_posts()');
     return res.status(200).json({ ok: true, data: rows[0] });
@@ -15,7 +16,7 @@ router.get('/', authMiddleware, async (req, res) => {
 });
 
 // GET /api/users/:id/posts — posts de un usuario
-router.get('/:id/posts', authMiddleware, async (req, res) => {
+router.get('/:id/posts', authMiddleware, requireAdmin, async (req, res) => {
   try {
     const [rows] = await pool.execute('CALL sp_get_posts_by_user(?)', [req.params.id]);
     return res.status(200).json({ ok: true, data: rows[0] });
@@ -26,7 +27,7 @@ router.get('/:id/posts', authMiddleware, async (req, res) => {
 });
 
 // DELETE /api/users/:id — deshabilitar usuario
-router.delete('/:id', authMiddleware, async (req, res) => {
+router.delete('/:id', authMiddleware, requireAdmin, async (req, res) => {
   try {
     await pool.execute('CALL sp_disable_user(?)', [req.params.id]);
     return res.status(200).json({ ok: true, message: 'Usuario deshabilitado.' });
@@ -37,7 +38,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
 });
 
 // PUT /api/users/:id — editar nombre de usuario
-router.put('/:id', authMiddleware, async (req, res) => {
+router.put('/:id', authMiddleware, requireAdmin, async (req, res) => {
   const { name } = req.body;
   if (!name) return res.status(400).json({ ok: false, message: 'El nombre es requerido.' });
 

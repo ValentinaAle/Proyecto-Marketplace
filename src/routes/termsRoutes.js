@@ -1,6 +1,7 @@
 const express        = require('express');
 const router         = express.Router();
 const authMiddleware = require('../middlewares/auth');
+const requireAdmin   = require('../middlewares/requireAdmin');
 const pool           = require('../config/db');
 
 // GET /api/terms
@@ -15,7 +16,7 @@ router.get('/', authMiddleware, async (req, res) => {
 });
 
 // PUT /api/terms
-router.put('/', authMiddleware, async (req, res) => {
+router.put('/', authMiddleware, requireAdmin, async (req, res) => {
   const { content } = req.body;
   if (!content) return res.status(400).json({ ok: false, message: 'El contenido es requerido.' });
 
