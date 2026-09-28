@@ -11,14 +11,17 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
 
-    <link rel="stylesheet" href="/css/home.css">
-    <link rel="stylesheet" href="/css/addpost.css">
-    <link rel="stylesheet" href="/css/terms.css">
-    <link rel="stylesheet" href="/css/profile.css">
-    <link rel="stylesheet" href="/css/support.css">
+    <link rel="stylesheet" href="/css/tokens.css?v=20260928-1">
+    <link rel="stylesheet" href="/css/home.css?v=20260928-8">
+    <link rel="stylesheet" href="/css/addpost.css?v=20260927-5">
+    <link rel="stylesheet" href="/css/terms.css?v=20260927-5">
+    <link rel="stylesheet" href="/css/profile.css?v=20260927-5">
+    <link rel="stylesheet" href="/css/support.css?v=20260927-5">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <link rel="stylesheet" href="/css/chatbot.css">
+    <link rel="stylesheet" href="/css/chatbot.css?v=20260928-1">
 </head>
+
+<body>
 
 <!-- CHATBOT (solo usuario) -->
 <div id="chatbot-container" style="display:none;">
@@ -60,7 +63,6 @@
 
 <script src="/js/chatbot.js"></script>
 
-<body>
     <!-- POST MODAL -->
     <div id="post-modal" class="modal-overlay">
         <div class="modal-box-detail">
@@ -555,7 +557,7 @@
     <div class="app" id="home-view">
 
         <!-- SIDEBAR -->
-        <aside class="sidebar">
+        <aside class="sidebar" aria-label="Navegación principal">
 
             <div class="logo mb-5">
                 FIVOX
@@ -579,7 +581,7 @@
                         Calificar servicios
                     </button>
 
-                    <button id="btn-mis-servicios">
+                    <button id="btn-mis-servicios" class="menu-active" aria-current="page">
                         <i class="bi bi-briefcase-fill me-2"></i>
                         Mis Servicios
                     </button>
@@ -609,19 +611,19 @@
 
             <!-- FLOATING BUTTONS -->
             <div class="floating-icons">
-                <button class="float-icon" id="btn-open-profile">
+                <button class="float-icon" id="btn-open-profile" aria-label="Abrir mi perfil" title="Mi perfil">
                     <i class="bi bi-person-fill"></i>
                 </button>
 
-                <button class="float-icon" id="btn-reportes" style="display:none;">
+                <button class="float-icon" id="btn-reportes" style="display:none;" aria-label="Abrir reportes" title="Reportes">
                     <i class="bi bi-file-earmark-bar-graph-fill"></i>
                 </button>
 
-                <button class="float-icon" id="btn-open-create">
+                <button class="float-icon float-icon-primary" id="btn-open-create" aria-label="Crear publicación" title="Crear publicación">
                     <i class="bi bi-plus-lg"></i>
                 </button>
 
-                <button class="float-icon" id="btn-support">
+                <button class="float-icon" id="btn-support" aria-label="Abrir soporte" title="Soporte">
                     <i class="bi bi-chat-dots-fill"></i>
                 </button>
             </div>
@@ -636,9 +638,10 @@
 
                     <p>Encontrá profesionales cerca tuyo</p>
 
-                    <div class="search">
-                        <input type="text" placeholder="Ej: plomero, programador, profesor particular...">
-                        <button>
+                    <div class="search" role="search">
+                        <i class="bi bi-search search-leading" aria-hidden="true"></i>
+                        <input type="search" aria-label="Buscar servicios" placeholder="Plomero, programador, profesor particular…">
+                        <button aria-label="Buscar">
                             <i class="bi bi-search"></i>
                         </button>
                     </div>
@@ -646,7 +649,7 @@
                 </section>
 
                 <!-- CATEGORIAS -->
-                <div class="categories-scroll">
+                <div class="categories-scroll" id="categories-scroll">
 
                     <div class="home-card" data-category="Técnicos">
                         <i class="bi bi-tools home-card-icon"></i>
@@ -684,6 +687,12 @@
                         <p>Sesiones, eventos y contenido visual.</p>
                     </div>
 
+                </div>
+
+                <div class="categories-scrollbar" role="scrollbar" aria-label="Desplazar filtros de servicios"
+                    aria-controls="categories-scroll" aria-orientation="horizontal" aria-valuemin="0"
+                    aria-valuemax="100" aria-valuenow="0" tabindex="0">
+                    <span class="categories-scrollbar-thumb"></span>
                 </div>
 
                 <!-- PUBLICACIONES -->
@@ -839,7 +848,7 @@
 
     </div>
 
-    <script src="/js/home.js"></script>
+    <script src="/js/home.js?v=20260928-1"></script>
 
 </body>
 

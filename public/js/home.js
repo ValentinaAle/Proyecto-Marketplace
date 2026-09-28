@@ -16,6 +16,7 @@ async function init() {
 
   configurarLogout();
   configurarCategorias();
+  configurarScrollCategorias();
   configurarBtnCrear();
   configurarTerminos();
   configurarBtnPerfil();
@@ -28,6 +29,89 @@ async function init() {
   configurarBtnAdminServicios();
   configurarBtnReportes();
   configurarBtnCalificar();
+}
+
+function configurarScrollCategorias() {
+  const scroller = document.getElementById('categories-scroll');
+  const scrollbar = document.querySelector('.categories-scrollbar');
+  const thumb = scrollbar?.querySelector('.categories-scrollbar-thumb');
+
+  if (!scroller || !scrollbar || !thumb) return;
+
+  let dragging = false;
+  let pointerStart = 0;
+  let scrollStart = 0;
+
+  const metrics = () => {
+    const maxScroll = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
+    const trackWidth = scrollbar.clientWidth;
+    const thumbWidth = maxScroll === 0
+      ? trackWidth
+      : Math.max(56, trackWidth * (scroller.clientWidth / scroller.scrollWidth));
+
+    return { maxScroll, trackWidth, thumbWidth };
+  };
+
+  const update = () => {
+    const { maxScroll, trackWidth, thumbWidth } = metrics();
+    const maxThumbTravel = Math.max(0, trackWidth - thumbWidth);
+    const progress = maxScroll > 0 ? scroller.scrollLeft / maxScroll : 0;
+
+    scrollbar.classList.toggle('is-hidden', maxScroll === 0);
+    thumb.style.width = `${thumbWidth}px`;
+    thumb.style.transform = `translateX(${progress * maxThumbTravel}px)`;
+    scrollbar.setAttribute('aria-valuenow', String(Math.round(progress * 100)));
+  };
+
+  scrollbar.addEventListener('pointerdown', (event) => {
+    const { maxScroll, trackWidth, thumbWidth } = metrics();
+    if (maxScroll === 0) return;
+
+    const thumbRect = thumb.getBoundingClientRect();
+    const pressedThumb = event.clientX >= thumbRect.left && event.clientX <= thumbRect.right;
+
+    if (!pressedThumb) {
+      const trackRect = scrollbar.getBoundingClientRect();
+      const target = event.clientX - trackRect.left - (thumbWidth / 2);
+      const progress = Math.max(0, Math.min(1, target / (trackWidth - thumbWidth)));
+      scroller.scrollLeft = progress * maxScroll;
+    }
+
+    dragging = true;
+    pointerStart = event.clientX;
+    scrollStart = scroller.scrollLeft;
+    scrollbar.setPointerCapture(event.pointerId);
+  });
+
+  scrollbar.addEventListener('pointermove', (event) => {
+    if (!dragging) return;
+    const { maxScroll, trackWidth, thumbWidth } = metrics();
+    const maxThumbTravel = trackWidth - thumbWidth;
+    if (maxThumbTravel <= 0) return;
+    scroller.scrollLeft = scrollStart + ((event.clientX - pointerStart) / maxThumbTravel) * maxScroll;
+  });
+
+  const stopDragging = () => { dragging = false; };
+  scrollbar.addEventListener('pointerup', stopDragging);
+  scrollbar.addEventListener('pointercancel', stopDragging);
+
+  scrollbar.addEventListener('keydown', (event) => {
+    const step = Math.max(120, scroller.clientWidth * 0.5);
+    const destinations = {
+      ArrowLeft: scroller.scrollLeft - step,
+      ArrowRight: scroller.scrollLeft + step,
+      Home: 0,
+      End: scroller.scrollWidth,
+    };
+
+    if (!(event.key in destinations)) return;
+    event.preventDefault();
+    scroller.scrollTo({ left: destinations[event.key], behavior: 'smooth' });
+  });
+
+  scroller.addEventListener('scroll', update, { passive: true });
+  new ResizeObserver(update).observe(scroller);
+  update();
 }
 
 function getToken() {

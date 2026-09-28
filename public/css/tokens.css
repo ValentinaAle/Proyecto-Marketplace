@@ -1,0 +1,55 @@
+:root {
+    --fv-accent: #168f7d;
+    --fv-accent-strong: #0f7668;
+    --fv-accent-soft: #dcece7;
+    --fv-accent-faint: #e8f1ee;
+    --fv-ink: #101916;
+    --fv-ink-soft: #3f504b;
+    --fv-muted: #62736e;
+    --fv-line: #c4d1cd;
+    --fv-line-strong: #aebfba;
+    --fv-surface: #f5f8f6;
+    --fv-canvas: #e2e9e6;
+    --fv-danger: #c53d45;
+    --fv-danger-soft: #fff0f1;
+    --fv-warning: #b66b12;
+    --fv-success: #21835b;
+    --fv-radius-control: 9px;
+    --fv-radius-card: 14px;
+    --fv-radius-panel: 20px;
+    --fv-shadow-sm: 0 1px 2px rgba(16, 35, 31, .05), 0 5px 18px rgba(16, 35, 31, .04);
+    --fv-shadow-md: 0 2px 4px rgba(16, 35, 31, .06), 0 16px 42px rgba(16, 35, 31, .10);
+    --fv-focus: 0 0 0 3px rgba(22, 143, 125, .18);
+}
+
+html {
+    color-scheme: light;
+    -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select,
+textarea,
+a {
+    touch-action: manipulation;
+}
+
+:where(button, input, select, textarea, a):focus-visible {
+    outline: 2px solid var(--fv-accent);
+    outline-offset: 3px;
+}
+
+::selection {
+    background: rgba(22, 143, 125, .2);
+    color: var(--fv-ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        scroll-behavior: auto !important;
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+    }
+}
