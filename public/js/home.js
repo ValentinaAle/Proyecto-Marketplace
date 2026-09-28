@@ -1179,16 +1179,16 @@ function configurarVistaPorRol() {
   const user = JSON.parse(userRaw);
   const esAdmin = user.role === 'ADMIN';
 
-  document.getElementById('btn-mis-servicios').style.display   = esAdmin ? 'none'  : 'block';
-  document.getElementById('btn-admin-servicios').style.display = esAdmin ? 'block' : 'none';
+  document.getElementById('btn-mis-servicios').style.display   = esAdmin ? 'none' : 'flex';
+  document.getElementById('btn-admin-servicios').style.display = esAdmin ? 'flex' : 'none';
   document.getElementById('btn-open-create').style.display     = esAdmin ? 'none'  : 'flex';
-  document.getElementById('btn-usuarios').style.display = esAdmin ? 'block' : 'none';
+  document.getElementById('btn-usuarios').style.display = esAdmin ? 'flex' : 'none';
   document.getElementById('btn-reportes').style.display = esAdmin ? 'flex' : 'none'; 
   document.getElementById('chatbot-container').style.display = esAdmin ? 'none' : 'block';
-  document.getElementById('btn-calificar').style.display = esAdmin ? 'none' : 'block';
+  document.getElementById('btn-calificar').style.display = esAdmin ? 'none' : 'flex';
   // Soporte: en admin va al sidebar, en usuario va como flotante
   document.getElementById('btn-support').style.display         = esAdmin ? 'none'  : 'flex';
-  document.getElementById('btn-support-admin').style.display   = esAdmin ? 'block' : 'none';
+  document.getElementById('btn-support-admin').style.display   = esAdmin ? 'flex' : 'none';
 
   if (esAdmin) document.body.classList.add('is-admin');
 }
