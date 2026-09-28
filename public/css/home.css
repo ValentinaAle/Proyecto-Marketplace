@@ -973,8 +973,10 @@ body::-webkit-scrollbar,
 .float-icon {
     width: 42px;
     height: 42px;
+    min-width: 42px;
+    flex: 0 0 42px;
     border: 1px solid var(--fv-line);
-    border-radius: var(--fv-radius-control);
+    border-radius: 50%;
     color: var(--fv-ink-soft);
     font-size: 16px;
     box-shadow: var(--fv-shadow-sm);
@@ -1152,7 +1154,7 @@ body::-webkit-scrollbar,
     .main-content { padding: 20px 16px 32px; }
     .floating-icons { right: 18px; }
     .categories-scroll { --categories-edge: 16px; }
-    .float-icon { width: 40px; height: 40px; }
+    .float-icon { width: 40px; height: 40px; min-width: 40px; flex-basis: 40px; }
     .hero {
         min-height: 0;
         padding: 34px 58px 28px 22px;
