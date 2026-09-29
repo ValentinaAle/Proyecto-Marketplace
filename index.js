@@ -20,6 +20,8 @@ const allowedOrigins = [
   `http://127.0.0.1:${PORT}`,
   'http://localhost:5500',
   'http://127.0.0.1:5500',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
 ].filter(Boolean);
 
 /* ─────────────────────────────────────────
@@ -68,17 +70,12 @@ app.get('/api/health', async (req, res) => {
 ───────────────────────────────────────── */
 const publicDir = path.join(__dirname, 'public');
 const htmlDir   = path.join(publicDir, 'html');
+const reactDist = path.join(__dirname, 'frontend', 'dist');
+const reactIndex = path.join(reactDist, 'index.html');
 
 const htmlPages = {
-  '/':                  'index.html',
-  '/login':             'index.html',
-  '/index.html':        'index.html',
   '/home':              'home.html',
   '/home.html':         'home.html',
-  '/register':          'register.html',
-  '/register.html':     'register.html',
-  '/forgot-password':   'forgot-password.html',
-  '/forgot-password.html': 'forgot-password.html',
 };
 
 Object.entries(htmlPages).forEach(([route, file]) => {
@@ -88,6 +85,23 @@ Object.entries(htmlPages).forEach(([route, file]) => {
 });
 
 app.use(express.static(publicDir));
+
+if (require('fs').existsSync(reactIndex)) {
+  app.use(express.static(reactDist));
+  ['/', '/login', '/register', '/forgot-password'].forEach((route) => {
+    app.get(route, (_req, res) => res.sendFile(reactIndex));
+  });
+} else {
+  const legacyAuthPages = {
+    '/': 'index.html',
+    '/login': 'index.html',
+    '/register': 'register.html',
+    '/forgot-password': 'forgot-password.html',
+  };
+  Object.entries(legacyAuthPages).forEach(([route, file]) => {
+    app.get(route, (_req, res) => res.sendFile(path.join(htmlDir, file)));
+  });
+}
 
 app.use((req, res) => {
   if (req.path.startsWith('/api/')) {

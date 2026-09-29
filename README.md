@@ -1,6 +1,24 @@
 # FIVOX — Marketplace
 
-Proyecto con frontend HTML/CSS/JavaScript, backend Node.js/Express y MySQL.
+Proyecto con frontend React/TypeScript en migración incremental, backend Node.js/Express y MySQL.
+
+## Frontend React
+
+El frontend nuevo vive en `frontend/`. Las pantallas de login, registro y recuperación ya están migradas; `/home` continúa usando temporalmente la implementación estática mientras se separa en componentes.
+
+```powershell
+npm --prefix frontend install
+npm run frontend:dev
+```
+
+Vite abre el frontend en `http://localhost:5173` y reenvía `/api` al backend de Express en `http://localhost:3000`.
+
+Para validar o generar el bundle de producción:
+
+```powershell
+npm run frontend:typecheck
+npm run frontend:build
+```
 
 ## Ejecutar con Docker
 
