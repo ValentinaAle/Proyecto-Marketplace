@@ -120,6 +120,19 @@ de Vite y publica el contenido de `artifacts/` como artefacto de Jenkins. El
 pipeline funciona en agentes Linux y Windows que tengan Node.js 22 o posterior,
 Git y npm disponibles en el `PATH`.
 
+Para ejecutar Jenkins en Docker con Node.js incluido:
+
+```powershell
+docker build -f docker/jenkins.Dockerfile -t fivox-jenkins:node22 .
+docker run -d --name jenkins --restart=on-failure `
+  -p 8080:8080 -p 50000:50000 `
+  -v jenkins_home:/var/jenkins_home `
+  fivox-jenkins:node22
+```
+
+El volumen `jenkins_home` conserva usuarios, plugins, credenciales y jobs aunque
+se reemplace el contenedor.
+
 Para crear el job:
 
 1. Crear un **Pipeline** (o **Multibranch Pipeline**) y seleccionar
