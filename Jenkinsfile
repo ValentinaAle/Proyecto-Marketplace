@@ -33,7 +33,10 @@ pipeline {
 
         stage('Test') {
             steps {
-                sh 'bash -c "shopt -s globstar && npm test"'
+                sh '''#!/bin/bash
+		shopt -s globstar
+		npm test
+		'''
             }
         }
 
