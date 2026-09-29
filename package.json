@@ -6,9 +6,12 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
+    "check:backend": "node scripts/check-backend.js",
+    "test": "npm run check:backend && npm run frontend:typecheck",
     "frontend:dev": "npm --prefix frontend run dev",
     "frontend:build": "npm --prefix frontend run build",
     "frontend:typecheck": "npm --prefix frontend run typecheck",
+    "package:ci": "node scripts/package-ci.js",
     "seed:demo": "node scripts/seed-demo.js"
   },
   "keywords": [],

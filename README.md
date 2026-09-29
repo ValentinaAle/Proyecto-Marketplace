@@ -111,3 +111,38 @@ requieren conexión a Internet.
 
 Se conserva la ejecución original con `npm install` y `npm start`, usando las
 variables de conexión y JWT de `.env` y una base MySQL ya configurada.
+
+## Integración continua con Jenkins
+
+El `Jenkinsfile` de la raíz instala las dependencias con `npm ci`, valida la
+sintaxis del backend, ejecuta el chequeo de tipos del frontend, genera el bundle
+de Vite y publica el contenido de `artifacts/` como artefacto de Jenkins. El
+pipeline funciona en agentes Linux y Windows que tengan Node.js 22 o posterior,
+Git y npm disponibles en el `PATH`.
+
+Para crear el job:
+
+1. Crear un **Pipeline** (o **Multibranch Pipeline**) y seleccionar
+   **Pipeline script from SCM**.
+2. Configurar el repositorio y las credenciales de GitHub, con `Jenkinsfile`
+   como **Script Path**.
+3. Instalar los plugins Pipeline, Git y GitHub. El trigger `githubPush()` espera
+   un webhook de GitHub dirigido a `https://SERVIDOR/github-webhook/`.
+4. Ejecutar una primera compilación manual para comprobar el agente y luego
+   hacer un push para verificar el webhook.
+
+Las mismas validaciones pueden ejecutarse localmente con:
+
+```powershell
+npm ci
+npm --prefix frontend ci
+npm test
+npm run frontend:build
+npm run package:ci
+```
+
+Actualmente `npm test` cubre la validación sintáctica del backend y el chequeo
+de tipos del frontend. Cuando se agregue una suite de pruebas unitarias o de
+integración, debe incorporarse a ese script para que Jenkins corte el pipeline
+ante cualquier prueba fallida. El despliegue no se automatiza todavía porque el
+repositorio no define un servidor o ambiente de destino.
