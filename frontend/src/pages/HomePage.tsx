@@ -10,6 +10,7 @@ import { PostCard } from '../home/PostCard';
 import { PostDetail } from '../home/PostDetail';
 import { ProfileModal } from '../home/ProfileModal';
 import { Sidebar } from '../home/Sidebar';
+import { SupportModal } from '../home/SupportModal';
 import type { Category, Post } from '../home/types';
 
 export function HomePage() {
@@ -23,7 +24,7 @@ export function HomePage() {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
-  const [activeModal, setActiveModal] = useState<'profile' | 'create' | 'services' | null>(null);
+  const [activeModal, setActiveModal] = useState<'profile' | 'create' | 'services' | 'support' | null>(null);
   const categoryStrip = useRef<HTMLDivElement>(null);
 
   const refreshPosts = useCallback(async () => {
@@ -61,6 +62,7 @@ export function HomePage() {
     if (label === 'Mi perfil') { setActiveModal('profile'); return; }
     if (label === 'Crear publicación') { setActiveModal('create'); return; }
     if (label === 'Mis Servicios') { setActiveModal('services'); return; }
+    if (label === 'Soporte') { setActiveModal('support'); return; }
     setMessage(`${label} se migra en la próxima etapa. Mientras tanto sigue disponible en el home actual.`);
   }
 
@@ -113,6 +115,7 @@ export function HomePage() {
       {activeModal === 'profile' && <ProfileModal token={token} onClose={() => setActiveModal(null)} onSaved={handleProfileSaved} />}
       {activeModal === 'create' && <CreatePostModal token={token} categories={categories} onClose={() => setActiveModal(null)} onCreated={handleCreated} />}
       {activeModal === 'services' && <MyServicesModal token={token} onClose={() => setActiveModal(null)} onChanged={refreshPosts} />}
+      {activeModal === 'support' && <SupportModal token={token} user={user} onClose={() => setActiveModal(null)} />}
     </div>
   );
 }
