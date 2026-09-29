@@ -26,3 +26,13 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<A
   }
   return payload;
 }
+
+export function authorizedRequest<T>(path: string, token: string, init?: RequestInit) {
+  return apiRequest<T>(path, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...init?.headers,
+    },
+  });
+}

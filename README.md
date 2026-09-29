@@ -4,7 +4,7 @@ Proyecto con frontend React/TypeScript en migración incremental, backend Node.j
 
 ## Frontend React
 
-El frontend nuevo vive en `frontend/`. Las pantallas de login, registro y recuperación ya están migradas; `/home` continúa usando temporalmente la implementación estática mientras se separa en componentes.
+El frontend nuevo vive en `frontend/`. Las pantallas de login, registro y recuperación ya están migradas. El núcleo del home puede probarse en `/home-react`; `/home` continúa usando temporalmente la implementación estática mientras se migran tickets, perfil y herramientas administrativas.
 
 ```powershell
 npm --prefix frontend install

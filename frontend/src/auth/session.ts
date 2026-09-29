@@ -15,6 +15,27 @@ export function hasSession(): boolean {
   return Boolean(localStorage.getItem('fivox_token') || sessionStorage.getItem('fivox_token'));
 }
 
+export function getToken(): string | null {
+  return localStorage.getItem('fivox_token') || sessionStorage.getItem('fivox_token');
+}
+
+export function getSessionUser(): SessionUser | null {
+  const raw = localStorage.getItem('fivox_user') || sessionStorage.getItem('fivox_user');
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as SessionUser;
+  } catch {
+    return null;
+  }
+}
+
+export function clearSession(): void {
+  ['fivox_token', 'fivox_user'].forEach((key) => {
+    localStorage.removeItem(key);
+    sessionStorage.removeItem(key);
+  });
+}
+
 export function saveSession(data: AuthData, persistent = false): void {
   const target = persistent ? localStorage : sessionStorage;
   const other = persistent ? sessionStorage : localStorage;

@@ -88,7 +88,7 @@ app.use(express.static(publicDir));
 
 if (require('fs').existsSync(reactIndex)) {
   app.use(express.static(reactDist));
-  ['/', '/login', '/register', '/forgot-password'].forEach((route) => {
+  ['/', '/login', '/register', '/forgot-password', '/home-react'].forEach((route) => {
     app.get(route, (_req, res) => res.sendFile(reactIndex));
   });
 } else {
