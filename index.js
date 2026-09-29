@@ -74,7 +74,7 @@ const reactDist = path.join(__dirname, 'frontend', 'dist');
 const reactIndex = path.join(reactDist, 'index.html');
 
 const htmlPages = {
-  '/home':              'home.html',
+  '/home-legacy':       'home.html',
   '/home.html':         'home.html',
 };
 
@@ -88,7 +88,7 @@ app.use(express.static(publicDir));
 
 if (require('fs').existsSync(reactIndex)) {
   app.use(express.static(reactDist));
-  ['/', '/login', '/register', '/forgot-password', '/home-react'].forEach((route) => {
+  ['/', '/login', '/register', '/forgot-password', '/home', '/home-react'].forEach((route) => {
     app.get(route, (_req, res) => res.sendFile(reactIndex));
   });
 } else {

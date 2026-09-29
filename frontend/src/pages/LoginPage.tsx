@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { apiRequest } from '../api/client';
-import { goToLegacyHome, hasSession, saveSession, type AuthData } from '../auth/session';
+import { goToHome, hasSession, saveSession, type AuthData } from '../auth/session';
 import { Alert } from '../components/Alert';
 import { AuthLayout } from '../components/AuthLayout';
 
@@ -13,7 +13,7 @@ export function LoginPage() {
   const [alert, setAlert] = useState<{ tone: 'danger' | 'success'; message: string } | null>(null);
 
   useEffect(() => {
-    if (hasSession()) goToLegacyHome();
+    if (hasSession()) goToHome();
   }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -32,7 +32,7 @@ export function LoginPage() {
       });
       saveSession(response.data, remember);
       setAlert({ tone: 'success', message: `¡Bienvenido/a, ${response.data.user.name || response.data.user.email}!` });
-      window.setTimeout(goToLegacyHome, 700);
+      window.setTimeout(goToHome, 700);
     } catch (error) {
       setAlert({ tone: 'danger', message: error instanceof Error ? error.message : 'No se pudo conectar con el servidor.' });
     } finally {

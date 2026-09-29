@@ -1,10 +1,10 @@
 # FIVOX — Marketplace
 
-Proyecto con frontend React/TypeScript en migración incremental, backend Node.js/Express y MySQL.
+Proyecto con frontend React/TypeScript, backend Node.js/Express y MySQL.
 
 ## Frontend React
 
-El frontend nuevo vive en `frontend/`. Las pantallas de login, registro y recuperación ya están migradas. El núcleo del home puede probarse en `/home-react`; `/home` continúa usando temporalmente la implementación estática mientras se migran tickets, perfil y herramientas administrativas.
+El frontend vive en `frontend/`. Login, registro, recuperación, home, perfil, publicaciones, soporte y herramientas administrativas ya usan React. La ruta principal es `/home`; durante la transición, la versión estática anterior queda disponible en `/home-legacy`.
 
 ```powershell
 npm --prefix frontend install

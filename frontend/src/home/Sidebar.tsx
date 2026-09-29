@@ -23,7 +23,7 @@ export function Sidebar({ user, onLegacyAction, onLogout }: SidebarProps) {
 
   return (
     <aside className="home-sidebar" aria-label="Navegación principal">
-      <a className="home-logo" href="/home-react" aria-label="FIVOX, inicio">FIVOX</a>
+      <a className="home-logo" href="/home" aria-label="FIVOX, inicio">FIVOX</a>
       <nav className="home-nav">
         {visibleItems.map((item) => (
           <button key={item.label} type="button" onClick={() => onLegacyAction(item.label)}>

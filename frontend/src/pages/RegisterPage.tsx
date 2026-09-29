@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { apiRequest } from '../api/client';
-import { goToLegacyHome, saveSession, type AuthData } from '../auth/session';
+import { goToHome, saveSession, type AuthData } from '../auth/session';
 import { Alert } from '../components/Alert';
 import { AuthLayout } from '../components/AuthLayout';
 
@@ -31,7 +31,7 @@ export function RegisterPage() {
       const response = await apiRequest<AuthData>('/auth/register', { method: 'POST', body: JSON.stringify(fields) });
       saveSession(response.data);
       setAlert({ tone: 'success', message: '¡Cuenta creada! Redirigiendo…' });
-      window.setTimeout(goToLegacyHome, 900);
+      window.setTimeout(goToHome, 900);
     } catch (error) {
       setAlert({ tone: 'danger', message: error instanceof Error ? error.message : 'No se pudo conectar con el servidor.' });
     } finally {

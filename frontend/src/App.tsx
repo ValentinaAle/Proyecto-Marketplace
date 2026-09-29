@@ -11,7 +11,8 @@ export function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-      <Route path="/home-react" element={<HomePage />} />
+      <Route path="/home" element={<HomePage />} />
+      <Route path="/home-react" element={<Navigate to="/home" replace />} />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );

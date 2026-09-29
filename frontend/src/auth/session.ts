@@ -51,8 +51,6 @@ export function replaceSession(data: AuthData): void {
   saveSession({ token: data.token, user: { ...current, ...data.user } as SessionUser }, persistent);
 }
 
-export function goToLegacyHome(): void {
-  const target = import.meta.env.VITE_LEGACY_HOME_URL
-    ?? (import.meta.env.DEV ? 'http://localhost:3000/home' : '/home');
-  window.location.assign(target);
+export function goToHome(): void {
+  window.location.assign('/home');
 }
