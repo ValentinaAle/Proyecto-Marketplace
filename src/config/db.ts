@@ -1,8 +1,8 @@
-const mysql = require('mysql2/promise');
+import mysql from 'mysql2/promise';
 
 const pool = mysql.createPool({
   host:     process.env.DB_HOST,
-  port:     process.env.DB_PORT     || 3306,
+  port:     Number(process.env.DB_PORT || 3306),
   user:     process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
@@ -13,13 +13,14 @@ const pool = mysql.createPool({
 
 // Verificar conexión al iniciar
 pool.getConnection()
-  .then(conn => {
+  .then((conn) => {
     console.log('✅ Conectado a MySQL:', process.env.DB_NAME);
     conn.release();
   })
-  .catch(err => {
-    console.error('❌ Error al conectar con MySQL:', err.message);
+  .catch((err: unknown) => {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('❌ Error al conectar con MySQL:', message);
     process.exit(1);
   });
 
-module.exports = pool;
+export default pool;

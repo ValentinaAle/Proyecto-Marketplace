@@ -1,6 +1,22 @@
 # FIVOX — Marketplace
 
-Proyecto con frontend HTML/CSS/JavaScript, backend Node.js/Express y MySQL.
+Proyecto con frontend HTML/CSS/JavaScript, backend Node.js/Express con TypeScript y MySQL.
+
+## Desarrollo del backend
+
+Se requiere Node.js 24 y npm. Instalar dependencias una vez con `npm install`.
+
+```bash
+npm run dev       # servidor de desarrollo con recarga automática
+npm run typecheck # valida los tipos sin generar archivos
+npm test          # ejecuta las pruebas automatizadas
+npm run build     # compila TypeScript dentro de dist/
+npm start         # ejecuta el backend compilado
+```
+
+`npm start` requiere haber ejecutado antes `npm run build`. Las variables de
+entorno siguen siendo las mismas que se documentan en `.env.example`; la
+ejecución con Docker compila el backend automáticamente en una etapa separada.
 
 ## Ejecutar con Docker
 

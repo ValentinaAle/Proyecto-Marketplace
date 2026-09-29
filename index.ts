@@ -1,15 +1,15 @@
-require('dotenv').config();
-const path       = require('path');
-const express    = require('express');
-const cors       = require('cors');
-const pool       = require('./src/config/db');
-const authRoutes  = require('./src/routes/authRoutes');
-const postsRoutes = require('./src/routes/postsRoutes');
-const supportRoutes = require('./src/routes/supportRoutes');
-const termsRoutes = require('./src/routes/termsRoutes');
-const usersRoutes = require('./src/routes/usersRoutes');
-const passwordRoutes = require('./src/routes/passwordRoutes');
-const reviewsRoutes = require('./src/routes/reviewsRoutes');
+import 'dotenv/config';
+import path from 'node:path';
+import cors from 'cors';
+import express from 'express';
+import pool from './src/config/db';
+import authRoutes from './src/routes/authRoutes';
+import passwordRoutes from './src/routes/passwordRoutes';
+import postsRoutes from './src/routes/postsRoutes';
+import reviewsRoutes from './src/routes/reviewsRoutes';
+import supportRoutes from './src/routes/supportRoutes';
+import termsRoutes from './src/routes/termsRoutes';
+import usersRoutes from './src/routes/usersRoutes';
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -66,7 +66,7 @@ app.get('/api/health', async (req, res) => {
 /* ─────────────────────────────────────────
    Frontend estático
 ───────────────────────────────────────── */
-const publicDir = path.join(__dirname, 'public');
+const publicDir = path.join(process.cwd(), 'public');
 const htmlDir   = path.join(publicDir, 'html');
 
 const htmlPages = {
@@ -107,8 +107,6 @@ app.use((req, res) => {
 /* ─────────────────────────────────────────
    Iniciar servidor
 ───────────────────────────────────────── */
-require('./src/config/db');
-
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
 });

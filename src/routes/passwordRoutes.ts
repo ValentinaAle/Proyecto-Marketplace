@@ -1,14 +1,25 @@
-const express     = require('express');
-const router      = express.Router();
-const pool        = require('../config/db');
-const bcrypt      = require('bcryptjs');
-const crypto      = require('crypto');
-const transporter = require('../config/mailer');
-const requests = new Map();
-const attempts = new Map();
+import crypto from 'node:crypto';
+import bcrypt from 'bcryptjs';
+import { Router } from 'express';
+import type { RowDataPacket } from 'mysql2/promise';
+import pool from '../config/db';
+import transporter from '../config/mailer';
+import { procedureRows, selectRows } from '../types/database';
+
+interface UserRow extends RowDataPacket {
+  id_user: number;
+}
+
+interface ForgotBody { email?: string }
+interface VerifyBody { email?: string; code?: string }
+interface ResetBody extends VerifyBody { newPassword?: string }
+
+const router = Router();
+const requests = new Map<string, number[]>();
+const attempts = new Map<string, number[]>();
 const WINDOW_MS = 15 * 60 * 1000;
 
-const isLimited = (store, key, limit) => {
+const isLimited = (store: Map<string, number[]>, key: string, limit: number): boolean => {
   const now = Date.now();
   const values = (store.get(key) || []).filter(time => now - time < WINDOW_MS);
   if (values.length >= limit) return true;
@@ -17,7 +28,7 @@ const isLimited = (store, key, limit) => {
   return false;
 };
 
-router.post('/forgot', async (req, res) => {
+router.post<Record<string, never>, unknown, ForgotBody>('/forgot', async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ ok: false, message: 'El email es requerido.' });
   if (isLimited(requests, `${req.ip}:${email.toLowerCase()}`, 3)) {
@@ -25,8 +36,8 @@ router.post('/forgot', async (req, res) => {
   }
 
   try {
-    const [rows] = await pool.execute('CALL sp_check_email_exists(?)', [email]);
-    const user = rows[0][0];
+    const [result] = await pool.execute('CALL sp_check_email_exists(?)', [email]);
+    const user = procedureRows<UserRow>(result)[0];
 
     if (!user) {
       return res.status(200).json({ ok: true, message: 'Si el email existe, recibirás un código.' });
@@ -69,7 +80,7 @@ router.post('/forgot', async (req, res) => {
 });
 
 // POST /api/password/verify
-router.post('/verify', async (req, res) => {
+router.post<Record<string, never>, unknown, VerifyBody>('/verify', async (req, res) => {
   const { email, code } = req.body;
   if (!email || !code) return res.status(400).json({ ok: false, message: 'Email y código son requeridos.' });
   if (isLimited(attempts, `${req.ip}:${email.toLowerCase()}`, 5)) {
@@ -77,11 +88,12 @@ router.post('/verify', async (req, res) => {
   }
 
   try {
-    const [rows] = await pool.execute(
+    const [result] = await pool.execute(
       'SELECT * FROM users WHERE email = ? AND reset_token = ? AND reset_token_expires > NOW()',
       [email, code]
     );
 
+    const rows = selectRows<UserRow>(result);
     if (rows.length === 0) {
       return res.status(400).json({ ok: false, message: 'Código inválido o expirado.' });
     }
@@ -95,7 +107,7 @@ router.post('/verify', async (req, res) => {
 });
 
 // POST /api/password/reset
-router.post('/reset', async (req, res) => {
+router.post<Record<string, never>, unknown, ResetBody>('/reset', async (req, res) => {
   const { email, code, newPassword } = req.body;
   if (!email || !code || !newPassword) {
     return res.status(400).json({ ok: false, message: 'Todos los campos son requeridos.' });
@@ -109,16 +121,20 @@ router.post('/reset', async (req, res) => {
   }
 
   try {
-    const [rows] = await pool.execute(
+    const [result] = await pool.execute(
       'SELECT * FROM users WHERE email = ? AND reset_token = ? AND reset_token_expires > NOW()',
       [email, code]
     );
 
+    const rows = selectRows<UserRow>(result);
     if (rows.length === 0) {
       return res.status(400).json({ ok: false, message: 'Código inválido o expirado.' });
     }
 
-    const user         = rows[0];
+    const user = rows[0];
+    if (!user) {
+      return res.status(400).json({ ok: false, message: 'Código inválido o expirado.' });
+    }
     const passwordHash = await bcrypt.hash(newPassword, 10);
 
     await pool.execute(
@@ -135,4 +151,4 @@ router.post('/reset', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

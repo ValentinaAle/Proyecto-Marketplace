@@ -1,14 +1,61 @@
-const bcrypt   = require('bcryptjs');
-const jwt      = require('jsonwebtoken');
-const pool     = require('../config/db');
+import bcrypt from 'bcryptjs';
+import type { Request, Response } from 'express';
+import jwt, { type SignOptions } from 'jsonwebtoken';
+import type { PoolConnection, RowDataPacket } from 'mysql2/promise';
+import pool from '../config/db';
+import { procedureRows, selectRows } from '../types/database';
+
+interface UserRow extends RowDataPacket {
+  id_user: number;
+  email: string;
+  password_hash: string;
+  is_active: number;
+  phone: string | null;
+}
+
+interface ProfileRow extends RowDataPacket {
+  name: string | null;
+  avatar_url: string | null;
+}
+
+interface RoleRow extends RowDataPacket {
+  name: string;
+}
+
+interface RegisterBody {
+  email?: string;
+  password?: string;
+  name?: string;
+  phone?: string;
+}
+
+interface LoginBody {
+  email?: string;
+  password?: string;
+}
+
+interface UpdateProfileBody {
+  name?: string;
+  avatar_url?: string;
+  phone?: string;
+  email?: string;
+}
+
+interface ChangePasswordBody {
+  oldPassword?: string;
+  newPassword?: string;
+}
 
 /* ─────────────────────────────────────────
    POST /api/auth/register
    Body: { email, password, name, phone }
 ───────────────────────────────────────── */
-const register = async (req, res) => {
+export const register = async (
+  req: Request<Record<string, never>, unknown, RegisterBody>,
+  res: Response,
+) => {
   const { email, password, name, phone } = req.body;
-  let connection;
+  let connection: PoolConnection | undefined;
 
   // Validaciones básicas
   if (!email || !password || !name) {
@@ -30,14 +77,15 @@ const register = async (req, res) => {
     await connection.beginTransaction();
 
     // 1. Verificar que el email no exista
-    const [rows] = await connection.execute(
+    const [result] = await connection.execute(
       'CALL sp_check_email_exists(?)',
       [email]
     );
 
     // mysql2 devuelve el result set dentro de rows[0]
-    const existing = rows[0];
+    const existing = procedureRows<UserRow>(result);
     if (existing.length > 0) {
+      await connection.rollback();
       return res.status(409).json({
         ok: false,
         message: 'Ya existe una cuenta con ese email.',
@@ -54,11 +102,12 @@ const register = async (req, res) => {
     );
 
     // 4. Obtener el id del usuario recién creado
-    const [newUserRows] = await connection.execute(
+    const [newUserResult] = await connection.execute(
       'CALL sp_check_email_exists(?)',
       [email]
     );
-    const newUser = newUserRows[0][0];
+    const newUser = procedureRows<UserRow>(newUserResult)[0];
+    if (!newUser) throw new Error('No se pudo recuperar el usuario creado.');
 
     // 5. Crear el perfil vinculado al usuario
     await connection.execute(
@@ -107,7 +156,10 @@ const register = async (req, res) => {
    POST /api/auth/login
    Body: { email, password }
 ───────────────────────────────────────── */
-const login = async (req, res) => {
+export const login = async (
+  req: Request<Record<string, never>, unknown, LoginBody>,
+  res: Response,
+) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -119,12 +171,12 @@ const login = async (req, res) => {
 
   try {
     // 1. Buscar usuario por email
-    const [rows] = await pool.execute(
+    const [userResult] = await pool.execute(
       'CALL sp_check_email_exists(?)',
       [email]
     );
 
-    const user = rows[0][0];
+    const user = procedureRows<UserRow>(userResult)[0];
 
     if (!user) {
       return res.status(401).json({
@@ -152,17 +204,17 @@ const login = async (req, res) => {
     }
 
     // 4. Obtener perfil y rol
-    const [profileRows] = await pool.execute(
+    const [profileResult] = await pool.execute(
       'CALL sp_get_profile(?)',
       [user.id_user]
     );
-    const profile = profileRows[0][0] || null;
+    const profile = procedureRows<ProfileRow>(profileResult)[0] || null;
 
-    const [roleRows] = await pool.execute(
+    const [roleResult] = await pool.execute(
       'SELECT r.name FROM roles r INNER JOIN users_roles ur ON r.id_role = ur.id_role WHERE ur.id_user = ?',
       [user.id_user]
     );
-    const role = roleRows[0]?.name || 'USER';
+    const role = selectRows<RoleRow>(roleResult)[0]?.name || 'USER';
 
     // 5. Generar JWT
     const token = generateToken(user.id_user, user.email);
@@ -194,19 +246,19 @@ const login = async (req, res) => {
 /* ─────────────────────────────────────────
    GET /api/auth/me   (requiere token)
 ───────────────────────────────────────── */
-const me = async (req, res) => {
+export const me = async (req: Request, res: Response) => {
   try {
-    const [profileRows] = await pool.execute(
+    const [profileResult] = await pool.execute(
       'CALL sp_get_profile(?)',
       [req.user.id_user]
     );
-    const profile = profileRows[0][0] || null;
+    const profile = procedureRows<ProfileRow>(profileResult)[0] || null;
 
-    const [userRows] = await pool.execute(
+    const [userResult] = await pool.execute(
       'CALL sp_check_email_exists(?)',
       [req.user.email]
     );
-    const user = userRows[0][0] || null;
+    const user = procedureRows<UserRow>(userResult)[0] || null;
 
     return res.status(200).json({
       ok: true,
@@ -231,7 +283,10 @@ const me = async (req, res) => {
    PUT /api/auth/profile   (requiere token)
    Body: { name, avatar_url, phone }
 ───────────────────────────────────────── */
-const updateProfile = async (req, res) => {
+export const updateProfile = async (
+  req: Request<Record<string, never>, unknown, UpdateProfileBody>,
+  res: Response,
+) => {
   const { name, avatar_url, phone } = req.body;
 
   if (!name) {
@@ -269,7 +324,10 @@ const updateProfile = async (req, res) => {
    PUT /api/auth/password   (requiere token)
    Body: { oldPassword, newPassword }
 ───────────────────────────────────────── */
-const changePassword = async (req, res) => {
+export const changePassword = async (
+  req: Request<Record<string, never>, unknown, ChangePasswordBody>,
+  res: Response,
+) => {
   const { oldPassword, newPassword } = req.body;
 
   if (!oldPassword || !newPassword) {
@@ -287,11 +345,14 @@ const changePassword = async (req, res) => {
   }
 
   try {
-    const [rows] = await pool.execute(
+    const [userResult] = await pool.execute(
       'CALL sp_check_email_exists(?)',
       [req.user.email]
     );
-    const user = rows[0][0];
+    const user = procedureRows<UserRow>(userResult)[0];
+    if (!user) {
+      return res.status(404).json({ ok: false, message: 'Usuario no encontrado.' });
+    }
 
     const passwordMatch = await bcrypt.compare(oldPassword, user.password_hash);
     if (!passwordMatch) {
@@ -324,12 +385,13 @@ const changePassword = async (req, res) => {
 /* ─────────────────────────────────────────
    Helper: generar JWT
 ───────────────────────────────────────── */
-const generateToken = (id_user, email) => {
+const generateToken = (id_user: number, email: string): string => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error('JWT_SECRET no está configurado.');
+  const expiresIn = (process.env.JWT_EXPIRES_IN || '7d') as SignOptions['expiresIn'];
   return jwt.sign(
     { id_user, email },
-    process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+    secret,
+    { expiresIn }
   );
 };
-
-module.exports = { register, login, me, updateProfile, changePassword };

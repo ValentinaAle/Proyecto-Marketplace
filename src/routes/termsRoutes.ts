@@ -1,14 +1,19 @@
-const express        = require('express');
-const router         = express.Router();
-const authMiddleware = require('../middlewares/auth');
-const requireAdmin   = require('../middlewares/requireAdmin');
-const pool           = require('../config/db');
+import { Router } from 'express';
+import type { RowDataPacket } from 'mysql2/promise';
+import pool from '../config/db';
+import authMiddleware from '../middlewares/auth';
+import requireAdmin from '../middlewares/requireAdmin';
+import { procedureRows } from '../types/database';
+
+const router = Router();
+
+interface UpdateTermsBody { content?: string }
 
 // GET /api/terms
 router.get('/', authMiddleware, async (req, res) => {
   try {
-    const [rows] = await pool.execute('CALL sp_get_terms()');
-    return res.status(200).json({ ok: true, data: rows[0][0] });
+    const [result] = await pool.execute('CALL sp_get_terms()');
+    return res.status(200).json({ ok: true, data: procedureRows<RowDataPacket>(result)[0] });
   } catch (error) {
     console.error('Error en sp_get_terms:', error);
     return res.status(500).json({ ok: false, message: 'Error al obtener términos.' });
@@ -16,7 +21,7 @@ router.get('/', authMiddleware, async (req, res) => {
 });
 
 // PUT /api/terms
-router.put('/', authMiddleware, requireAdmin, async (req, res) => {
+router.put<Record<string, never>, unknown, UpdateTermsBody>('/', authMiddleware, requireAdmin, async (req, res) => {
   const { content } = req.body;
   if (!content) return res.status(400).json({ ok: false, message: 'El contenido es requerido.' });
 
@@ -29,4 +34,4 @@ router.put('/', authMiddleware, requireAdmin, async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;
