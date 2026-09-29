@@ -4,13 +4,17 @@ import { authorizedRequest } from '../api/client';
 import { clearSession, getSessionUser, getToken, replaceSession, type AuthData } from '../auth/session';
 import { getCategoryMeta } from '../home/categoryMeta';
 import { CreatePostModal } from '../home/CreatePostModal';
+import { AdminUsersModal } from '../home/AdminUsersModal';
 import { FloatingActions } from '../home/FloatingActions';
 import { MyServicesModal } from '../home/MyServicesModal';
+import { ModerationModal } from '../home/ModerationModal';
 import { PostCard } from '../home/PostCard';
 import { PostDetail } from '../home/PostDetail';
 import { ProfileModal } from '../home/ProfileModal';
+import { ReportsModal } from '../home/ReportsModal';
 import { Sidebar } from '../home/Sidebar';
 import { SupportModal } from '../home/SupportModal';
+import { TermsModal } from '../home/TermsModal';
 import type { Category, Post } from '../home/types';
 
 export function HomePage() {
@@ -24,7 +28,7 @@ export function HomePage() {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
-  const [activeModal, setActiveModal] = useState<'profile' | 'create' | 'services' | 'support' | null>(null);
+  const [activeModal, setActiveModal] = useState<'profile' | 'create' | 'services' | 'support' | 'users' | 'moderation' | 'terms' | 'reports' | null>(null);
   const categoryStrip = useRef<HTMLDivElement>(null);
 
   const refreshPosts = useCallback(async () => {
@@ -63,6 +67,10 @@ export function HomePage() {
     if (label === 'Crear publicación') { setActiveModal('create'); return; }
     if (label === 'Mis Servicios') { setActiveModal('services'); return; }
     if (label === 'Soporte') { setActiveModal('support'); return; }
+    if (label === 'Usuarios') { setActiveModal('users'); return; }
+    if (label === 'Administrar Servicios') { setActiveModal('moderation'); return; }
+    if (label === 'Términos y Condiciones') { setActiveModal('terms'); return; }
+    if (label === 'Reportes') { setActiveModal('reports'); return; }
     setMessage(`${label} se migra en la próxima etapa. Mientras tanto sigue disponible en el home actual.`);
   }
 
@@ -116,6 +124,10 @@ export function HomePage() {
       {activeModal === 'create' && <CreatePostModal token={token} categories={categories} onClose={() => setActiveModal(null)} onCreated={handleCreated} />}
       {activeModal === 'services' && <MyServicesModal token={token} onClose={() => setActiveModal(null)} onChanged={refreshPosts} />}
       {activeModal === 'support' && <SupportModal token={token} user={user} onClose={() => setActiveModal(null)} />}
+      {activeModal === 'users' && <AdminUsersModal token={token} onClose={() => setActiveModal(null)} />}
+      {activeModal === 'moderation' && <ModerationModal token={token} onClose={() => setActiveModal(null)} onChanged={refreshPosts} />}
+      {activeModal === 'terms' && <TermsModal token={token} user={user} onClose={() => setActiveModal(null)} />}
+      {activeModal === 'reports' && <ReportsModal token={token} posts={posts} onClose={() => setActiveModal(null)} />}
     </div>
   );
 }
