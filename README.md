@@ -144,6 +144,12 @@ Para crear el job:
 4. Ejecutar una primera compilación manual para comprobar el agente y luego
    hacer un push para verificar el webhook.
 
+Mientras Jenkins se ejecute únicamente en `localhost`, el pipeline también usa
+`pollSCM('H/5 * * * *')`: Jenkins consulta GitHub aproximadamente cada cinco
+minutos y sólo inicia un build cuando detecta un commit nuevo. La `H` distribuye
+la consulta dentro del intervalo para evitar que todos los jobs se ejecuten al
+mismo segundo.
+
 Las mismas validaciones pueden ejecutarse localmente con:
 
 ```powershell
