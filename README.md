@@ -18,6 +18,14 @@ npm start         # ejecuta el backend compilado
 entorno siguen siendo las mismas que se documentan en `.env.example`; la
 ejecución con Docker compila el backend automáticamente en una etapa separada.
 
+### Asistente de ayuda
+
+El chatbot reconoce preguntas con variantes de mayúsculas, acentos y sinónimos.
+Sus temas cubren búsqueda y contacto de prestadores, publicación y estado de
+servicios, perfil y contraseñas, soporte y tickets, reseñas, reportes, términos,
+roles y problemas técnicos. Cuando corresponde, muestra un botón que abre la
+sección de la aplicación relacionada; para temas desconocidos deriva a soporte.
+
 ## Ejecutar con Docker
 
 Se necesita Docker Desktop iniciado, con contenedores Linux y Docker Compose.
