@@ -233,6 +233,7 @@ const me = async (req, res) => {
 ───────────────────────────────────────── */
 const updateProfile = async (req, res) => {
   const { name, avatar_url, phone } = req.body;
+  const nextEmail = req.body.email || req.user.email;
 
   if (!name) {
     return res.status(400).json({
@@ -249,12 +250,16 @@ const updateProfile = async (req, res) => {
 
     await pool.execute(
     'UPDATE users SET email = ?, phone = ? WHERE id_user = ?',
-    [req.body.email || req.user.email, phone || null, req.user.id_user]
+    [nextEmail, phone || null, req.user.id_user]
  );
 
     return res.status(200).json({
       ok: true,
       message: 'Perfil actualizado correctamente.',
+      data: {
+        token: generateToken(req.user.id_user, nextEmail),
+        user: { id_user: req.user.id_user, email: nextEmail, name },
+      },
     });
   } catch (error) {
     console.error('Error en updateProfile:', error);

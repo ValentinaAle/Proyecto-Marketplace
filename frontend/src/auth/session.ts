@@ -45,6 +45,12 @@ export function saveSession(data: AuthData, persistent = false): void {
   target.setItem('fivox_user', JSON.stringify(data.user));
 }
 
+export function replaceSession(data: AuthData): void {
+  const persistent = Boolean(localStorage.getItem('fivox_token'));
+  const current = getSessionUser();
+  saveSession({ token: data.token, user: { ...current, ...data.user } as SessionUser }, persistent);
+}
+
 export function goToLegacyHome(): void {
   const target = import.meta.env.VITE_LEGACY_HOME_URL
     ?? (import.meta.env.DEV ? 'http://localhost:3000/home' : '/home');

@@ -1,11 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { authorizedRequest } from '../api/client';
-import { clearSession, getSessionUser, getToken } from '../auth/session';
+import { clearSession, getSessionUser, getToken, replaceSession, type AuthData } from '../auth/session';
 import { getCategoryMeta } from '../home/categoryMeta';
+import { CreatePostModal } from '../home/CreatePostModal';
 import { FloatingActions } from '../home/FloatingActions';
+import { MyServicesModal } from '../home/MyServicesModal';
 import { PostCard } from '../home/PostCard';
 import { PostDetail } from '../home/PostDetail';
+import { ProfileModal } from '../home/ProfileModal';
 import { Sidebar } from '../home/Sidebar';
 import type { Category, Post } from '../home/types';
 
@@ -20,7 +23,14 @@ export function HomePage() {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
+  const [activeModal, setActiveModal] = useState<'profile' | 'create' | 'services' | null>(null);
   const categoryStrip = useRef<HTMLDivElement>(null);
+
+  const refreshPosts = useCallback(async () => {
+    if (!token) return;
+    const response = await authorizedRequest<Post[]>('/posts', token);
+    setPosts(response.data);
+  }, [token]);
 
   useEffect(() => {
     if (!token) return;
@@ -48,7 +58,20 @@ export function HomePage() {
   }
 
   function legacyNotice(label: string) {
+    if (label === 'Mi perfil') { setActiveModal('profile'); return; }
+    if (label === 'Crear publicación') { setActiveModal('create'); return; }
+    if (label === 'Mis Servicios') { setActiveModal('services'); return; }
     setMessage(`${label} se migra en la próxima etapa. Mientras tanto sigue disponible en el home actual.`);
+  }
+
+  async function handleCreated() {
+    await refreshPosts();
+    setMessage('Publicación creada. Quedó pendiente de aprobación.');
+  }
+
+  async function handleProfileSaved(session: AuthData) {
+    replaceSession(session);
+    await refreshPosts();
   }
 
   return (
@@ -87,6 +110,9 @@ export function HomePage() {
         </div>
       </main>
       {selectedPost && <PostDetail post={selectedPost} onClose={() => setSelectedPost(null)} />}
+      {activeModal === 'profile' && <ProfileModal token={token} onClose={() => setActiveModal(null)} onSaved={handleProfileSaved} />}
+      {activeModal === 'create' && <CreatePostModal token={token} categories={categories} onClose={() => setActiveModal(null)} onCreated={handleCreated} />}
+      {activeModal === 'services' && <MyServicesModal token={token} onClose={() => setActiveModal(null)} onChanged={refreshPosts} />}
     </div>
   );
 }

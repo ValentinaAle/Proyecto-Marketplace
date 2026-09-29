@@ -53,11 +53,58 @@ router.post('/', authMiddleware, async (req, res) => {
 // GET /api/posts/my — mis posts (usuario)
 router.get('/my', authMiddleware, async (req, res) => {
   try {
-    const [rows] = await pool.execute('CALL sp_get_my_posts(?)', [req.user.id_user]);
-    return res.status(200).json({ ok: true, data: rows[0] });
+    const [rows] = await pool.execute(
+      `SELECT p.id_post, p.title, p.description, p.image_url, p.created_at,
+              p.is_active, NULL AS rejection_reason, c.name AS category
+       FROM posts p
+       INNER JOIN categories c ON c.id_category = p.id_category
+       WHERE p.id_user = ?
+       ORDER BY p.created_at DESC`,
+      [req.user.id_user]
+    );
+    return res.status(200).json({ ok: true, data: rows });
   } catch (error) {
-    console.error('Error en sp_get_my_posts:', error);
+    console.error('Error al obtener publicaciones propias:', error);
     return res.status(500).json({ ok: false, message: 'Error al obtener tus posts.' });
+  }
+});
+
+// PUT /api/posts/my/:id/status — activar o desactivar una publicación propia
+router.put('/my/:id/status', authMiddleware, async (req, res) => {
+  const status = Number(req.body.status);
+  if (![0, 1].includes(status)) {
+    return res.status(400).json({ ok: false, message: 'Estado inválido.' });
+  }
+
+  try {
+    const [result] = await pool.execute(
+      'UPDATE posts SET is_active = ? WHERE id_post = ? AND id_user = ? AND is_active IN (0, 1)',
+      [status, req.params.id, req.user.id_user]
+    );
+    if (!result.affectedRows) {
+      return res.status(404).json({ ok: false, message: 'Publicación no encontrada o pendiente de revisión.' });
+    }
+    return res.status(200).json({ ok: true, message: status ? 'Publicación activada.' : 'Publicación desactivada.' });
+  } catch (error) {
+    console.error('Error al cambiar estado de publicación propia:', error);
+    return res.status(500).json({ ok: false, message: 'Error al actualizar la publicación.' });
+  }
+});
+
+// DELETE /api/posts/my/:id — eliminar una publicación propia inactiva
+router.delete('/my/:id', authMiddleware, async (req, res) => {
+  try {
+    const [result] = await pool.execute(
+      'DELETE FROM posts WHERE id_post = ? AND id_user = ? AND is_active = 0',
+      [req.params.id, req.user.id_user]
+    );
+    if (!result.affectedRows) {
+      return res.status(404).json({ ok: false, message: 'Solo se pueden eliminar publicaciones propias inactivas.' });
+    }
+    return res.status(200).json({ ok: true, message: 'Publicación eliminada.' });
+  } catch (error) {
+    console.error('Error al eliminar publicación propia:', error);
+    return res.status(500).json({ ok: false, message: 'Error al eliminar la publicación.' });
   }
 });
 
