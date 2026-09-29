@@ -32,11 +32,9 @@ pipeline {
         }
 
         stage('Test') {
-            steps {
-                sh '''#!/bin/bash
-		shopt -s globstar
-		npm test
-		'''
+ 	   steps {
+      		  sh 'node --import tsx --test $(find tests -name "*.test.ts")'
+   	 
             }
         }
 
