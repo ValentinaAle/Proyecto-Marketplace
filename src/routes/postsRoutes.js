@@ -4,6 +4,33 @@ const router         = express.Router();
 const authMiddleware = require('../middlewares/auth');
 const requireAdmin   = require('../middlewares/requireAdmin');
 const pool           = require('../config/db');
+const upload         = require('../middlewares/upload');
+const cloudinary     = require('../config/cloudinary');
+
+router.post('/image', authMiddleware, upload.single('image'), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ ok: false, message: 'No se recibió ninguna imagen.' });
+  }
+
+  try {
+    const result = await new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        {
+          folder: 'fivox/posts',
+          resource_type: 'image',
+          transformation: [{ width: 1200, height: 1200, crop: 'limit' }],
+        },
+        (error, uploaded) => error ? reject(error) : resolve(uploaded)
+      );
+      stream.end(req.file.buffer);
+    });
+
+    return res.status(200).json({ ok: true, data: { url: result.secure_url } });
+  } catch (error) {
+    console.error('Error al subir imagen de publicación:', error);
+    return res.status(500).json({ ok: false, message: 'No se pudo subir la imagen. Intentá de nuevo.' });
+  }
+});
 
 // GET /api/posts/categories
 router.get('/categories', authMiddleware, async (req, res) => {

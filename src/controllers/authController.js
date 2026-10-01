@@ -1,6 +1,7 @@
 const bcrypt   = require('bcryptjs');
 const jwt      = require('jsonwebtoken');
 const pool     = require('../config/db');
+const cloudinary = require('../config/cloudinary');
 
 /* ─────────────────────────────────────────
    POST /api/auth/register
@@ -337,4 +338,31 @@ const generateToken = (id_user, email) => {
   );
 };
 
-module.exports = { register, login, me, updateProfile, changePassword };
+const uploadAvatar = async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ ok: false, message: 'No se recibió ninguna imagen.' });
+  }
+
+  try {
+    const result = await new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        {
+          folder: 'fivox/avatars',
+          public_id: `user_${req.user.id_user}`,
+          overwrite: true,
+          resource_type: 'image',
+          transformation: [{ width: 400, height: 400, crop: 'fill', gravity: 'face' }],
+        },
+        (error, uploaded) => error ? reject(error) : resolve(uploaded)
+      );
+      stream.end(req.file.buffer);
+    });
+
+    return res.status(200).json({ ok: true, data: { url: result.secure_url } });
+  } catch (error) {
+    console.error('Error al subir avatar:', error);
+    return res.status(500).json({ ok: false, message: 'No se pudo subir la imagen. Intentá de nuevo.' });
+  }
+};
+
+module.exports = { register, login, me, updateProfile, changePassword, uploadAvatar };

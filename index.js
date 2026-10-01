@@ -65,6 +65,16 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
+app.use((error, req, res, next) => {
+  if (error?.name === 'MulterError' || error?.message?.includes('Formato de imagen')) {
+    const message = error.code === 'LIMIT_FILE_SIZE'
+      ? 'La imagen no puede superar los 5 MB.'
+      : error.message;
+    return res.status(400).json({ ok: false, message });
+  }
+  next(error);
+});
+
 /* ─────────────────────────────────────────
    Frontend estático
 ───────────────────────────────────────── */
