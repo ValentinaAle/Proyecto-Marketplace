@@ -12,7 +12,8 @@
     "frontend:build": "npm --prefix frontend run build",
     "frontend:typecheck": "npm --prefix frontend run typecheck",
     "package:ci": "node scripts/package-ci.js",
-    "seed:demo": "node scripts/seed-demo.js"
+    "seed:demo": "node scripts/seed-demo.js",
+    "seed:my-services": "node scripts/seed-my-services-demo.js"
   },
   "keywords": [],
   "author": "",

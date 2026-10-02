@@ -8,7 +8,7 @@ import { CategoryScrollbar } from '../home/CategoryScrollbar';
 import { Chatbot } from '../home/Chatbot';
 import { AdminUsersModal } from '../home/AdminUsersModal';
 import { FloatingActions } from '../home/FloatingActions';
-import { MyServicesModal } from '../home/MyServicesModal';
+import { MyServicesView } from '../home/MyServicesModal';
 import { ModerationModal } from '../home/ModerationModal';
 import { PostCard } from '../home/PostCard';
 import { PostDetail } from '../home/PostDetail';
@@ -30,16 +30,18 @@ export function HomePage() {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
-  const [activeModal, setActiveModal] = useState<'profile' | 'create' | 'services' | 'support' | 'users' | 'moderation' | 'terms' | 'reports' | null>(null);
+  const [activeView, setActiveView] = useState<'publications' | 'services'>('publications');
+  const [activeModal, setActiveModal] = useState<'profile' | 'create' | 'support' | 'users' | 'moderation' | 'terms' | 'reports' | null>(null);
   const categoryStrip = useRef<HTMLDivElement>(null);
   const postsSection = useRef<HTMLElement>(null);
   const searchInput = useRef<HTMLInputElement>(null);
+  const homeMain = useRef<HTMLElement>(null);
 
   const activeSidebarItem = activeModal === 'users' ? 'Usuarios'
     : activeModal === 'support' ? 'Soporte'
-      : activeModal === 'services' ? 'Mis Servicios'
-        : activeModal === 'moderation' ? 'Administrar Servicios'
-          : activeModal === 'terms' ? 'Términos y Condiciones'
+      : activeModal === 'moderation' ? 'Administrar Servicios'
+        : activeModal === 'terms' ? 'Términos y Condiciones'
+          : activeView === 'services' ? 'Mis Servicios'
             : 'Publicaciones';
 
   const refreshPosts = useCallback(async () => {
@@ -76,12 +78,13 @@ export function HomePage() {
   function legacyNotice(label: string) {
     if (label === 'Publicaciones') {
       setActiveModal(null);
-      postsSection.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setActiveView('publications');
+      homeMain.current?.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
     if (label === 'Mi perfil') { setActiveModal('profile'); return; }
     if (label === 'Crear publicación') { setActiveModal('create'); return; }
-    if (label === 'Mis Servicios') { setActiveModal('services'); return; }
+    if (label === 'Mis Servicios') { setActiveModal(null); setActiveView('services'); homeMain.current?.scrollTo({ top: 0, behavior: 'smooth' }); return; }
     if (label === 'Soporte') { setActiveModal('support'); return; }
     if (label === 'Usuarios') { setActiveModal('users'); return; }
     if (label === 'Administrar Servicios') { setActiveModal('moderation'); return; }
@@ -100,12 +103,22 @@ export function HomePage() {
     await refreshPosts();
   }
 
+  function filterFromDetail(selectedCategory: string) {
+    setSelectedPost(null);
+    setActiveModal(null);
+    setActiveView('publications');
+    setQuery('');
+    setCategory(selectedCategory);
+    window.requestAnimationFrame(() => homeMain.current?.scrollTo({ top: 0, behavior: 'smooth' }));
+  }
+
   return (
     <div className="home-frame">
       <Sidebar user={user} activeItem={activeSidebarItem} onLegacyAction={legacyNotice} onLogout={logout} />
-      <main className="home-main">
+      <main className="home-main" ref={homeMain}>
         <FloatingActions isAdmin={user.role === 'ADMIN'} onAction={legacyNotice} />
         <div className="home-content">
+          {activeView === 'publications' ? <>
           <section className="home-hero">
             <h1>¿Qué servicio necesitás?</h1>
             <p>Encontrá profesionales de confianza en un solo lugar.</p>
@@ -134,13 +147,13 @@ export function HomePage() {
             {message && <div className="home-message" role="status">{message}<button type="button" aria-label="Cerrar mensaje" onClick={() => setMessage(null)}><i className="bi bi-x" /></button></div>}
             {loading ? <div className="post-grid">{Array.from({ length: 8 }, (_, index) => <div className="post-skeleton" key={index} />)}</div> : visiblePosts.length ? <div className="post-grid">{visiblePosts.map((post) => <PostCard key={post.id_post} post={post} onOpen={setSelectedPost} />)}</div> : <div className="empty-state"><i className="bi bi-search" /><h3>No encontramos publicaciones</h3><p>Probá con otra búsqueda o eliminá el filtro seleccionado.</p></div>}
           </section>
+          </> : <MyServicesView token={token} categories={categories} onChanged={refreshPosts} />}
         </div>
       </main>
       {user.role !== 'ADMIN' && <Chatbot searchRef={searchInput} onAction={legacyNotice} />}
-      {selectedPost && <PostDetail post={selectedPost} onClose={() => setSelectedPost(null)} />}
+      {selectedPost && <PostDetail post={selectedPost} token={token} canContact={user.role !== 'ADMIN'} onCategorySelect={filterFromDetail} onClose={() => setSelectedPost(null)} />}
       {activeModal === 'profile' && <ProfileModal token={token} onClose={() => setActiveModal(null)} onSaved={handleProfileSaved} />}
       {activeModal === 'create' && <CreatePostModal token={token} categories={categories} onClose={() => setActiveModal(null)} onCreated={handleCreated} />}
-      {activeModal === 'services' && <MyServicesModal token={token} onClose={() => setActiveModal(null)} onChanged={refreshPosts} />}
       {activeModal === 'support' && <SupportModal token={token} user={user} onClose={() => setActiveModal(null)} />}
       {activeModal === 'users' && <AdminUsersModal token={token} onClose={() => setActiveModal(null)} />}
       {activeModal === 'moderation' && <ModerationModal token={token} onClose={() => setActiveModal(null)} onChanged={refreshPosts} />}

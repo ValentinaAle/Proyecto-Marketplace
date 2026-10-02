@@ -82,7 +82,7 @@ router.get('/my', authMiddleware, async (req, res) => {
   try {
     const [rows] = await pool.execute(
       `SELECT p.id_post, p.title, p.description, p.image_url, p.created_at,
-              p.is_active, NULL AS rejection_reason, c.name AS category
+              p.is_active, p.rejection_reason, p.id_category, c.name AS category
        FROM posts p
        INNER JOIN categories c ON c.id_category = p.id_category
        WHERE p.id_user = ?
@@ -93,6 +93,36 @@ router.get('/my', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('Error al obtener publicaciones propias:', error);
     return res.status(500).json({ ok: false, message: 'Error al obtener tus posts.' });
+  }
+});
+
+// PUT /api/posts/my/:id — editar una publicación propia
+router.put('/my/:id', authMiddleware, async (req, res) => {
+  const { title, description, image_url, id_category } = req.body;
+  if (!title?.trim() || !description?.trim() || !Number(id_category)) {
+    return res.status(400).json({ ok: false, message: 'Título, descripción y categoría son obligatorios.' });
+  }
+  if (title.trim().length > 45 || description.trim().length > 300) {
+    return res.status(400).json({ ok: false, message: 'La publicación supera el límite permitido.' });
+  }
+
+  try {
+    const [[category]] = await pool.execute('SELECT id_category FROM categories WHERE id_category = ? LIMIT 1', [id_category]);
+    if (!category) return res.status(400).json({ ok: false, message: 'La categoría seleccionada no existe.' });
+
+    const [result] = await pool.execute(
+      `UPDATE posts SET title = ?, description = ?, image_url = ?, id_category = ?,
+       is_active = 2, rejection_reason = NULL
+       WHERE id_post = ? AND id_user = ?`,
+      [title.trim(), description.trim(), image_url?.trim() || null, id_category, req.params.id, req.user.id_user]
+    );
+    if (!result.affectedRows) {
+      return res.status(404).json({ ok: false, message: 'Publicación no encontrada.' });
+    }
+    return res.status(200).json({ ok: true, message: 'Cambios guardados. La publicación volvió a revisión.' });
+  } catch (error) {
+    console.error('Error al editar publicación propia:', error);
+    return res.status(500).json({ ok: false, message: 'Error al editar la publicación.' });
   }
 });
 

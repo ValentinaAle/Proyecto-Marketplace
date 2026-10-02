@@ -17,6 +17,8 @@ export interface Post {
   total_reviews?: number;
   is_active?: 0 | 1 | 2 | 3;
   rejection_reason?: string | null;
+  created_at?: string;
+  id_category?: number;
 }
 
 export interface Profile {
