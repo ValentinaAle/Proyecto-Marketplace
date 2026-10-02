@@ -4,6 +4,8 @@ import { authorizedRequest } from '../api/client';
 import { clearSession, getSessionUser, getToken, replaceSession, type AuthData } from '../auth/session';
 import { getCategoryMeta } from '../home/categoryMeta';
 import { CreatePostModal } from '../home/CreatePostModal';
+import { CategoryScrollbar } from '../home/CategoryScrollbar';
+import { Chatbot } from '../home/Chatbot';
 import { AdminUsersModal } from '../home/AdminUsersModal';
 import { FloatingActions } from '../home/FloatingActions';
 import { MyServicesModal } from '../home/MyServicesModal';
@@ -30,6 +32,15 @@ export function HomePage() {
   const [message, setMessage] = useState<string | null>(null);
   const [activeModal, setActiveModal] = useState<'profile' | 'create' | 'services' | 'support' | 'users' | 'moderation' | 'terms' | 'reports' | null>(null);
   const categoryStrip = useRef<HTMLDivElement>(null);
+  const postsSection = useRef<HTMLElement>(null);
+  const searchInput = useRef<HTMLInputElement>(null);
+
+  const activeSidebarItem = activeModal === 'users' ? 'Usuarios'
+    : activeModal === 'support' ? 'Soporte'
+      : activeModal === 'services' ? 'Mis Servicios'
+        : activeModal === 'moderation' ? 'Administrar Servicios'
+          : activeModal === 'terms' ? 'Términos y Condiciones'
+            : 'Publicaciones';
 
   const refreshPosts = useCallback(async () => {
     if (!token) return;
@@ -63,6 +74,11 @@ export function HomePage() {
   }
 
   function legacyNotice(label: string) {
+    if (label === 'Publicaciones') {
+      setActiveModal(null);
+      postsSection.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
     if (label === 'Mi perfil') { setActiveModal('profile'); return; }
     if (label === 'Crear publicación') { setActiveModal('create'); return; }
     if (label === 'Mis Servicios') { setActiveModal('services'); return; }
@@ -86,39 +102,41 @@ export function HomePage() {
 
   return (
     <div className="home-frame">
-      <Sidebar user={user} onLegacyAction={legacyNotice} onLogout={logout} />
+      <Sidebar user={user} activeItem={activeSidebarItem} onLegacyAction={legacyNotice} onLogout={logout} />
       <main className="home-main">
         <FloatingActions isAdmin={user.role === 'ADMIN'} onAction={legacyNotice} />
         <div className="home-content">
           <section className="home-hero">
-            <span className="hero-eyebrow">Servicios cerca tuyo</span>
             <h1>¿Qué servicio necesitás?</h1>
             <p>Encontrá profesionales de confianza en un solo lugar.</p>
             <label className="home-search">
               <i className="bi bi-search" aria-hidden="true" />
-              <input type="search" aria-label="Buscar servicios" placeholder="Plomero, programador, profesor particular…" value={query} onChange={(event) => setQuery(event.target.value)} />
+              <input ref={searchInput} type="search" aria-label="Buscar servicios" placeholder="Plomero, programador, profesor particular…" value={query} onChange={(event) => setQuery(event.target.value)} />
               {query && <button type="button" aria-label="Limpiar búsqueda" onClick={() => setQuery('')}><i className="bi bi-x-lg" /></button>}
             </label>
           </section>
 
-          <section className="category-section" aria-labelledby="category-title">
-            <div className="section-heading"><div><span>Explorá</span><h2 id="category-title">Categorías</h2></div><div className="category-controls">{category && <button className="clear-category" type="button" onClick={() => setCategory(null)}>Ver todas</button>}<button type="button" aria-label="Ver categorías anteriores" onClick={() => categoryStrip.current?.scrollBy({ left: -464, behavior: 'smooth' })}><i className="bi bi-arrow-left" /></button><button type="button" aria-label="Ver más categorías" onClick={() => categoryStrip.current?.scrollBy({ left: 464, behavior: 'smooth' })}><i className="bi bi-arrow-right" /></button></div></div>
-            <div className="category-strip" ref={categoryStrip}>
+          <section className="category-section" aria-label="Filtros por categoría">
+            <CategoryScrollbar scrollerRef={categoryStrip} itemCount={categories.length} />
+            {category && <div className="category-selection"><button type="button" onClick={() => setCategory(null)}>Ver todas</button></div>}
+            <div className="category-strip" id="category-strip" ref={categoryStrip}>
+              <span className="category-edge-spacer" aria-hidden="true" />
               {categories.map((item) => {
                 const meta = getCategoryMeta(item.name);
                 const active = category === item.name;
-                return <button key={item.id_category} className={active ? 'category-card is-active' : 'category-card'} type="button" aria-pressed={active} onClick={() => setCategory(active ? null : item.name)}><i className={`bi ${meta.icon}`} /><strong>{item.name}</strong><span>{meta.description}</span></button>;
+                return <button key={item.id_category} className={active ? 'category-card is-active' : 'category-card'} type="button" aria-pressed={active} onClick={() => setCategory(active ? null : item.name)}><span className="category-card-heading"><i className={`bi ${meta.icon}`} /><strong>{item.name}</strong></span><span className="category-card-description">{meta.description}</span></button>;
               })}
+              <span className="category-edge-spacer" aria-hidden="true" />
             </div>
           </section>
 
-          <section className="posts-section" aria-labelledby="posts-title">
-            <div className="section-heading"><div><span>{visiblePosts.length} disponibles</span><h2 id="posts-title">Publicaciones</h2></div></div>
+          <section className="posts-section" ref={postsSection} aria-label="Publicaciones">
             {message && <div className="home-message" role="status">{message}<button type="button" aria-label="Cerrar mensaje" onClick={() => setMessage(null)}><i className="bi bi-x" /></button></div>}
             {loading ? <div className="post-grid">{Array.from({ length: 8 }, (_, index) => <div className="post-skeleton" key={index} />)}</div> : visiblePosts.length ? <div className="post-grid">{visiblePosts.map((post) => <PostCard key={post.id_post} post={post} onOpen={setSelectedPost} />)}</div> : <div className="empty-state"><i className="bi bi-search" /><h3>No encontramos publicaciones</h3><p>Probá con otra búsqueda o eliminá el filtro seleccionado.</p></div>}
           </section>
         </div>
       </main>
+      {user.role !== 'ADMIN' && <Chatbot searchRef={searchInput} onAction={legacyNotice} />}
       {selectedPost && <PostDetail post={selectedPost} onClose={() => setSelectedPost(null)} />}
       {activeModal === 'profile' && <ProfileModal token={token} onClose={() => setActiveModal(null)} onSaved={handleProfileSaved} />}
       {activeModal === 'create' && <CreatePostModal token={token} categories={categories} onClose={() => setActiveModal(null)} onCreated={handleCreated} />}

@@ -10,5 +10,5 @@ const metadata: Record<string, CategoryMeta> = {
 };
 
 export function getCategoryMeta(name: string): CategoryMeta {
-  return metadata[name] ?? { icon: 'bi-grid', description: 'Explorá servicios disponibles cerca tuyo.' };
+  return metadata[name] ?? { icon: 'bi-grid', description: 'Servicios de esta categoría.' };
 }
