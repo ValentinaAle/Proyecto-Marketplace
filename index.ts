@@ -4,6 +4,7 @@ import cors from 'cors';
 import express from 'express';
 import pool from './src/config/db';
 import authRoutes from './src/routes/authRoutes';
+import chatbotRoutes from './src/routes/chatbotRoutes';
 import passwordRoutes from './src/routes/passwordRoutes';
 import postsRoutes from './src/routes/postsRoutes';
 import reviewsRoutes from './src/routes/reviewsRoutes';
@@ -47,6 +48,7 @@ app.use(express.urlencoded({ extended: true }));
    API
 ───────────────────────────────────────── */
 app.use('/api/auth', authRoutes);
+app.use('/api/chatbot', chatbotRoutes);
 app.use('/api/posts', postsRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/terms', termsRoutes);

@@ -202,10 +202,47 @@ function initChatbot() {
         input.value = '';
     }
 
-    function sendMessage(text) {
+    async function sendMessage(text) {
         appendMessage(text, 'user');
         quickRepliesContainer.style.display = 'none';
-        window.setTimeout(() => appendBotResponse(getBotResponse(text)), 350);
+
+        const ruleResponse = getBotResponse(text);
+        if (ruleResponse.id !== DEFAULT_RESPONSE.id) {
+            window.setTimeout(() => appendBotResponse(ruleResponse), 350);
+            return;
+        }
+
+        const pendingMessage = appendMessage('⏳ Consultando al asistente de IA...', 'bot');
+        pendingMessage.classList.add('chatbot-msg-pending');
+
+        try {
+            const aiResponse = await getAiResponse(text);
+            pendingMessage.remove();
+            appendBotResponse(aiResponse);
+        } catch (error) {
+            console.warn('La segunda capa de IA no está disponible:', error);
+            pendingMessage.remove();
+            appendBotResponse(DEFAULT_RESPONSE);
+        }
+    }
+
+    async function getAiResponse(message) {
+        const token = localStorage.getItem('fivox_token') || sessionStorage.getItem('fivox_token');
+        const response = await fetch('/api/chatbot/ask', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ message }),
+        });
+
+        const data = await response.json();
+        if (!response.ok || !data.ok || typeof data.data?.answer !== 'string') {
+            throw new Error(data.message || 'No se pudo obtener una respuesta de IA.');
+        }
+
+        return { id: 'ai', answer: data.data.answer };
     }
 
     function appendBotResponse(response) {
@@ -227,6 +264,7 @@ function initChatbot() {
         div.innerText = text;
         messages.appendChild(div);
         messages.scrollTop = messages.scrollHeight;
+        return div;
     }
 
     function runAction(actionType) {

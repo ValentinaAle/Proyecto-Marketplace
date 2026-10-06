@@ -221,6 +221,11 @@
     transform: scale(1.08);
 }
 
+.chatbot-msg-pending {
+    color: #6b7280;
+    font-style: italic;
+}
+
 .chatbot-action-btn {
     align-self: flex-start;
     margin-top: -4px;
