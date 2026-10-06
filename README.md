@@ -55,6 +55,10 @@ Las cuentas locales incluidas para pruebas son:
 | --- | --- | --- |
 | Administrador | `admin@test.com` | `Admin123` |
 | Usuario | `user@test.com` | `Usuario123` |
+| Usuario | `usuario.prueba@fivox.local` | `PruebaFivox2026!` |
+| Administrador | `admin.prueba@fivox.local` | `PruebaFivox2026!` |
+| Usuario | `usuario.demo@fivox.local` | `DemoUsuario2026` |
+| Administrador | `admin.demo@fivox.local` | `DemoAdmin2026!` |
 
 Estas credenciales son sólo para desarrollo local y no deben reutilizarse en un
 entorno público.

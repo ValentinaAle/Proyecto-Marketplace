@@ -7,6 +7,10 @@ const usersSql = readFileSync(
   path.join(process.cwd(), 'database/init/marketplace_db_users.sql'),
   'utf8',
 );
+const testAccountsSql = readFileSync(
+  path.join(process.cwd(), 'database/init/zzzz-test-accounts.sql'),
+  'utf8',
+);
 
 describe('authentication seed data', () => {
   it('stores bcrypt hashes for every seeded user', () => {
@@ -25,5 +29,18 @@ describe('authentication seed data', () => {
       usersSql,
       /\(2,'user@test\.com','\$2[aby]\$10\$.{53}','[^']+',1,/
     );
+  });
+
+  it('defines every requested local test account with a bcrypt hash', () => {
+    const emails = [
+      'usuario.prueba@fivox.local',
+      'admin.prueba@fivox.local',
+      'usuario.demo@fivox.local',
+      'admin.demo@fivox.local',
+    ];
+
+    emails.forEach((email) => assert.match(testAccountsSql, new RegExp(email.replace('.', '\\.'))));
+    const hashes = [...testAccountsSql.matchAll(/'\$2[aby]\$10\$.{53}'/g)];
+    assert.equal(hashes.length, emails.length);
   });
 });
