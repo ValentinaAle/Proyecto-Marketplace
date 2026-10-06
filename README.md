@@ -49,6 +49,16 @@ para ejecutar con Node no necesita modificarse.
 Abrir **http://localhost:8080**. Para cambiar el puerto, editar `FRONTEND_PORT`
 en `.env.docker` y ejecutar nuevamente el comando de inicio.
 
+Las cuentas locales incluidas para pruebas son:
+
+| Rol | Email | Contraseña |
+| --- | --- | --- |
+| Administrador | `admin@test.com` | `Admin123` |
+| Usuario | `user@test.com` | `Usuario123` |
+
+Estas credenciales son sólo para desarrollo local y no deben reutilizarse en un
+entorno público.
+
 ### Qué se ejecuta
 
 | Servicio | Función | Puerto dentro de Docker |
