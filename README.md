@@ -113,6 +113,26 @@ contraseña de aplicación de esa cuenta. El resto de la app puede usarse sin
 configurar correo. Las fuentes, Bootstrap y otros recursos CDN del frontend
 requieren conexión a Internet.
 
+### Segunda capa local de IA del chatbot (opcional)
+
+El chatbot responde primero mediante sus reglas locales. Si no reconoce una
+consulta, puede pedir una respuesta al modelo local de Ollama. No requiere una
+clave ni genera cargos por consulta. Instalar Ollama, descargar el modelo con
+`ollama pull llama3.2:3b` y configurar estas variables en `.env.docker`:
+
+```text
+OLLAMA_BASE_URL=http://host.docker.internal:11434
+OLLAMA_MODEL=llama3.2:3b
+```
+
+Ollama debe estar ejecutándose en la computadora antes de iniciar la aplicación.
+Si el servicio local o el modelo no están disponibles, el chatbot conserva su
+respuesta de respaldo y deriva a soporte. La IA sólo responde y orienta; no
+ejecuta acciones como publicar, eliminar, cerrar tickets ni cambiar contraseñas.
+
+No se deben incluir contraseñas, códigos de recuperación, tokens u otros datos
+sensibles en las consultas del chatbot.
+
 ## Ejecución sin Docker
 
 Se conserva la ejecución original con `npm install` y `npm start`, usando las
