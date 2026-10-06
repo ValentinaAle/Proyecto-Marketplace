@@ -49,6 +49,20 @@ para ejecutar con Node no necesita modificarse.
 Abrir **http://localhost:8080**. Para cambiar el puerto, editar `FRONTEND_PORT`
 en `.env.docker` y ejecutar nuevamente el comando de inicio.
 
+Las cuentas locales incluidas para pruebas son:
+
+| Rol | Email | Contraseña |
+| --- | --- | --- |
+| Administrador | `admin@test.com` | `Admin123` |
+| Usuario | `user@test.com` | `Usuario123` |
+| Usuario | `usuario.prueba@fivox.local` | `PruebaFivox2026!` |
+| Administrador | `admin.prueba@fivox.local` | `PruebaFivox2026!` |
+| Usuario | `usuario.demo@fivox.local` | `DemoUsuario2026` |
+| Administrador | `admin.demo@fivox.local` | `DemoAdmin2026!` |
+
+Estas credenciales son sólo para desarrollo local y no deben reutilizarse en un
+entorno público.
+
 ### Qué se ejecuta
 
 | Servicio | Función | Puerto dentro de Docker |
