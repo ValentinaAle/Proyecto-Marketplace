@@ -222,6 +222,18 @@ input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px 
 .home-message { position: relative; margin-bottom: 16px; padding: 12px 44px 12px 14px; border: 1px solid #a7d4bd; border-radius: 9px; background: #ecf7f1; color: #176443; font-size: 13px; }
 .home-message button { position: absolute; top: 50%; right: 7px; width: 30px; height: 30px; transform: translateY(-50%); border: 0; background: transparent; color: inherit; cursor: pointer; }
 .modal-backdrop { position: fixed; z-index: 1000; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(12,24,21,.56); backdrop-filter: blur(3px); }
+.confirmation-backdrop { position: fixed; z-index: 1200; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(12,24,21,.66); backdrop-filter: blur(5px); }
+.confirmation-dialog { width: min(430px,100%); display: grid; grid-template-columns: 46px minmax(0,1fr); gap: 16px; padding: 24px; border: 1px solid rgba(255,255,255,.72); border-radius: 16px; background: var(--surface); box-shadow: 0 24px 70px rgba(12,24,21,.3), 0 2px 6px rgba(12,24,21,.12); }
+.confirmation-icon { width: 46px; height: 46px; display: grid; place-items: center; border-radius: 12px; background: #dcece7; color: var(--accent-strong); font-size: 20px; }
+.confirmation-dialog--danger .confirmation-icon { background: #fff0f1; color: #922c33; }
+.confirmation-copy { align-self: center; }
+.confirmation-copy h2 { margin: 0 0 6px; color: var(--ink); font-size: 20px; line-height: 1.25; letter-spacing: -.02em; text-wrap: balance; }
+.confirmation-copy p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.confirmation-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }
+.confirmation-actions button { min-height: 44px; padding: 10px 18px; border-radius: 9px; font-weight: 600; cursor: pointer; }
+.confirmation-actions button:disabled { cursor: wait; opacity: .65; }
+.confirmation-danger-button { border: 1px solid #922c33; background: #922c33; color: #fff; box-shadow: 0 7px 16px rgba(146,44,51,.2); }
+.confirmation-danger-button:hover:not(:disabled) { background: #762229; }
 .post-detail { position: relative; width: min(700px,100%); max-height: min(650px,calc(100vh - 40px)); display: grid; grid-template-columns: minmax(0,1fr); overflow: hidden; border: 1px solid rgba(255,255,255,.65); border-radius: 20px; background: var(--surface); box-shadow: 0 24px 70px rgba(12,24,21,.22), 0 2px 6px rgba(12,24,21,.08); }
 .modal-close { position: absolute; z-index: 1; top: 14px; right: 14px; width: 42px; height: 42px; border: 1px solid var(--line); border-radius: 50%; background: var(--surface); color: var(--ink); cursor: pointer; box-shadow: 0 4px 14px rgba(16,35,31,.14); }
 .detail-image { width: 100%; height: 180px; min-height: 0; display: block; object-fit: cover; object-position: center; }

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import { authorizedRequest } from '../api/client';
 import type { SessionUser } from '../auth/session';
 import { Alert } from '../components/Alert';
+import { ConfirmationDialog } from '../components/ConfirmationDialog';
 import { ModalShell } from './ModalShell';
 
 type Ticket = {
@@ -31,6 +32,8 @@ export function SupportModal({ token, user, onClose }: Props) {
   const [newFields, setNewFields] = useState({ subject: '', message: '' });
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [showCloseConfirmation, setShowCloseConfirmation] = useState(false);
+  const [closingTicket, setClosingTicket] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const messagesEnd = useRef<HTMLDivElement>(null);
 
@@ -106,8 +109,9 @@ export function SupportModal({ token, user, onClose }: Props) {
   }
 
   async function closeTicket() {
-    if (!selected || !window.confirm('¿Cerrar esta consulta?')) return;
-    try { await authorizedRequest<unknown>(`/support/tickets/${selected.id_ticket}/close`, token, { method: 'PUT' }); await loadTickets(); } catch (reason) { setError(reason instanceof Error ? reason.message : 'No se pudo cerrar la consulta.'); }
+    if (!selected) return;
+    setClosingTicket(true);
+    try { await authorizedRequest<unknown>(`/support/tickets/${selected.id_ticket}/close`, token, { method: 'PUT' }); setShowCloseConfirmation(false); await loadTickets(); } catch (reason) { setError(reason instanceof Error ? reason.message : 'No se pudo cerrar la consulta.'); } finally { setClosingTicket(false); }
   }
 
   const filterOptions: Array<{ key: Filter; label: string }> = isAdmin
@@ -120,7 +124,7 @@ export function SupportModal({ token, user, onClose }: Props) {
     return 'is-open';
   }
 
-  return <ModalShell title={isAdmin ? 'Centro de soporte' : 'Mis consultas'} subtitle={isAdmin ? 'Gestioná y respondé las consultas de la comunidad.' : 'Contactate con el equipo de FIVOX.'} onClose={onClose} size="large" className="form-modal--support form-modal--gray-header" contentClassName="form-modal-content--support" headerContent={<label className="ticket-search ticket-search--header"><i className="bi bi-search" /><input type="search" aria-label="Buscar consulta" placeholder="Buscar consulta…" value={query} onChange={(event) => setQuery(event.target.value)} /></label>}>
+  return <><ModalShell title={isAdmin ? 'Centro de soporte' : 'Mis consultas'} subtitle={isAdmin ? 'Gestioná y respondé las consultas de la comunidad.' : 'Contactate con el equipo de FIVOX.'} onClose={onClose} size="large" className="form-modal--support form-modal--gray-header" contentClassName="form-modal-content--support" headerContent={<label className="ticket-search ticket-search--header"><i className="bi bi-search" /><input type="search" aria-label="Buscar consulta" placeholder="Buscar consulta…" value={query} onChange={(event) => setQuery(event.target.value)} /></label>}>
     {error && <Alert tone="danger">{error}</Alert>}
     <div className={selected || newTicket ? 'support-workspace has-detail' : 'support-workspace'}>
       <aside className="ticket-browser">
@@ -130,8 +134,8 @@ export function SupportModal({ token, user, onClose }: Props) {
       </aside>
 
       <section className="ticket-detail">
-        {newTicket ? <form className="new-ticket-form stacked-form" onSubmit={createTicket}><div className="mobile-detail-heading"><button type="button" onClick={() => setNewTicket(false)}><i className="bi bi-arrow-left" /></button><div><h3>Nueva consulta</h3><p>Contanos brevemente qué necesitás.</p></div></div><label>Asunto<input maxLength={100} value={newFields.subject} onChange={(event) => setNewFields({ ...newFields, subject: event.target.value })} /></label><label>Mensaje inicial <span className="optional-label">Opcional</span><textarea rows={6} value={newFields.message} onChange={(event) => setNewFields({ ...newFields, message: event.target.value })} /></label><button className="primary-button" disabled={sending}>{sending ? 'Creando…' : 'Crear consulta'}</button></form> : selected ? <><header className="ticket-chat-header"><button className="mobile-back" type="button" aria-label="Volver a consultas" onClick={() => setSelected(null)}><i className="bi bi-arrow-left" /></button><div><h3>Consulta #{selected.id_ticket}</h3><p>{selected.subject || 'Sin asunto'}{isAdmin && selected.user_name ? ` · ${selected.user_name}` : ''}</p></div>{isAdmin && selected.status === 'OPEN' && <button className="resolve-ticket-action" type="button" aria-label="Marcar como resuelta" data-tooltip="Marcar como resuelta" onClick={closeTicket}><i className="bi bi-check-lg" /></button>}<button className="close-ticket-action" type="button" aria-label="Cerrar conversación" data-tooltip="Cerrar conversación" onClick={() => setSelected(null)}><i className="bi bi-x-lg" /></button></header><div className="ticket-messages">{messages.length ? messages.map((message) => { const mine = Number(message.id_user) === Number(user.id_user); return <div className={mine ? 'ticket-message is-mine' : 'ticket-message'} key={message.id_message}><p>{message.message}</p><time>{new Date(message.created_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</time></div>; }) : <div className="ticket-empty"><span>No hay mensajes todavía.</span></div>}<div ref={messagesEnd} /></div><form className="ticket-composer" onSubmit={sendMessage}><input aria-label="Mensaje" disabled={selected.status === 'CLOSED'} placeholder={selected.status === 'CLOSED' ? 'Esta consulta fue resuelta' : 'Escribí tu mensaje…'} value={draft} onChange={(event) => setDraft(event.target.value)} /><button type="submit" aria-label="Enviar mensaje" disabled={sending || selected.status === 'CLOSED' || !draft.trim()}><i className="bi bi-send-fill" /></button></form></> : <div className="ticket-placeholder"><i className="bi bi-chat-square-text" /><h3>Seleccioná una consulta</h3><p>Acá vas a poder ver el historial completo y responder.</p></div>}
+        {newTicket ? <form className="new-ticket-form stacked-form" onSubmit={createTicket}><div className="mobile-detail-heading"><button type="button" onClick={() => setNewTicket(false)}><i className="bi bi-arrow-left" /></button><div><h3>Nueva consulta</h3><p>Contanos brevemente qué necesitás.</p></div></div><label>Asunto<input maxLength={100} value={newFields.subject} onChange={(event) => setNewFields({ ...newFields, subject: event.target.value })} /></label><label>Mensaje inicial <span className="optional-label">Opcional</span><textarea rows={6} value={newFields.message} onChange={(event) => setNewFields({ ...newFields, message: event.target.value })} /></label><button className="primary-button" disabled={sending}>{sending ? 'Creando…' : 'Crear consulta'}</button></form> : selected ? <><header className="ticket-chat-header"><button className="mobile-back" type="button" aria-label="Volver a consultas" onClick={() => setSelected(null)}><i className="bi bi-arrow-left" /></button><div><h3>Consulta #{selected.id_ticket}</h3><p>{selected.subject || 'Sin asunto'}{isAdmin && selected.user_name ? ` · ${selected.user_name}` : ''}</p></div>{isAdmin && selected.status === 'OPEN' && <button className="resolve-ticket-action" type="button" aria-label="Marcar como resuelta" data-tooltip="Marcar como resuelta" onClick={() => setShowCloseConfirmation(true)}><i className="bi bi-check-lg" /></button>}<button className="close-ticket-action" type="button" aria-label="Cerrar conversación" data-tooltip="Cerrar conversación" onClick={() => setSelected(null)}><i className="bi bi-x-lg" /></button></header><div className="ticket-messages">{messages.length ? messages.map((message) => { const mine = Number(message.id_user) === Number(user.id_user); return <div className={mine ? 'ticket-message is-mine' : 'ticket-message'} key={message.id_message}><p>{message.message}</p><time>{new Date(message.created_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</time></div>; }) : <div className="ticket-empty"><span>No hay mensajes todavía.</span></div>}<div ref={messagesEnd} /></div><form className="ticket-composer" onSubmit={sendMessage}><input aria-label="Mensaje" disabled={selected.status === 'CLOSED'} placeholder={selected.status === 'CLOSED' ? 'Esta consulta fue resuelta' : 'Escribí tu mensaje…'} value={draft} onChange={(event) => setDraft(event.target.value)} /><button type="submit" aria-label="Enviar mensaje" disabled={sending || selected.status === 'CLOSED' || !draft.trim()}><i className="bi bi-send-fill" /></button></form></> : <div className="ticket-placeholder"><i className="bi bi-chat-square-text" /><h3>Seleccioná una consulta</h3><p>Acá vas a poder ver el historial completo y responder.</p></div>}
       </section>
     </div>
-  </ModalShell>;
+  </ModalShell>{showCloseConfirmation && selected && <ConfirmationDialog title="¿Marcar la consulta como resuelta?" message={`La consulta #${selected.id_ticket} quedará cerrada y ya no admitirá nuevos mensajes.`} confirmLabel="Marcar como resuelta" busy={closingTicket} onCancel={() => setShowCloseConfirmation(false)} onConfirm={() => void closeTicket()} />}</>;
 }
