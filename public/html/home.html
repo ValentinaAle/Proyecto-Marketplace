@@ -16,14 +16,17 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
 
-    <link rel="stylesheet" href="/css/home.css">
-    <link rel="stylesheet" href="/css/addpost.css">
-    <link rel="stylesheet" href="/css/terms.css">
-    <link rel="stylesheet" href="/css/profile.css">
-    <link rel="stylesheet" href="/css/support.css">
+    <link rel="stylesheet" href="/css/tokens.css?v=20260928-1">
+    <link rel="stylesheet" href="/css/home.css?v=20260928-15">
+    <link rel="stylesheet" href="/css/addpost.css?v=20260927-5">
+    <link rel="stylesheet" href="/css/terms.css?v=20260927-5">
+    <link rel="stylesheet" href="/css/profile.css?v=20260927-5">
+    <link rel="stylesheet" href="/css/support.css?v=20260928-1">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <link rel="stylesheet" href="/css/chatbot.css">
+    <link rel="stylesheet" href="/css/chatbot.css?v=20260928-2">
 </head>
+
+<body>
 
 <!-- CHATBOT (solo usuario) -->
 <div id="chatbot-container" style="display:none;">
@@ -65,7 +68,6 @@
 
 <script src="/js/chatbot.js?v=2"></script>
 
-<body>
     <!-- POST MODAL -->
     <div id="post-modal" class="modal-overlay">
         <div class="modal-box-detail">
@@ -356,74 +358,86 @@
     </div>
 
 
-    <!-- ADMIN SUPPORT MODAL (Kanban 3 columnas) -->
+    <!-- ADMIN SUPPORT WORKSPACE -->
     <div id="admin-support-modal">
         <div class="admin-support-box">
 
             <div class="admin-support-header">
-                <h2>Consultas</h2>
-                <button class="admin-support-close" onclick="closeAdminSupportModal()">
+                <div>
+                    <p class="admin-support-eyebrow">Centro de soporte</p>
+                    <h2>Consultas de usuarios</h2>
+                    <p class="admin-support-description">Revisá, respondé y cerrá solicitudes desde un solo lugar.</p>
+                </div>
+                <button class="admin-support-close" onclick="closeAdminSupportModal()" aria-label="Cerrar consultas">
                     <i class="bi bi-x-lg"></i>
                 </button>
             </div>
 
-            <input type="text" id="admin-ticket-search" placeholder="Buscar por ID, usuario o asunto..."
-                oninput="filtrarTicketsAdmin()">
-
-            <div id="admin-ticket-sections">
-                <div class="admin-ticket-col col-unread">
-                    <div class="admin-col-header">
-                        <span class="col-label"><i class="bi bi-envelope-fill"></i> Sin responder</span>
-                        <span class="col-count" id="count-unread">0</span>
+            <div class="admin-support-workspace">
+                <aside class="admin-ticket-panel" aria-label="Lista de consultas">
+                    <div class="admin-ticket-search-wrap">
+                        <i class="bi bi-search" aria-hidden="true"></i>
+                        <input type="search" id="admin-ticket-search" placeholder="Buscar por ID, usuario o asunto"
+                            aria-label="Buscar consultas" oninput="filtrarTicketsAdmin()">
                     </div>
-                    <div class="ticket-list" id="ticket-list-unread"></div>
-                </div>
 
-                <div class="admin-ticket-col col-open">
-                    <div class="admin-col-header">
-                        <span class="col-label"><i class="bi bi-chat-dots-fill"></i> Abiertos</span>
-                        <span class="col-count" id="count-open">0</span>
+                    <div class="admin-ticket-filters" role="tablist" aria-label="Filtrar consultas">
+                        <button class="admin-ticket-filter active" data-filter="unread" role="tab" aria-selected="true"
+                            onclick="cambiarFiltroTicketsAdmin('unread', this)">
+                            Nuevos <span id="count-unread">0</span>
+                        </button>
+                        <button class="admin-ticket-filter" data-filter="open" role="tab" aria-selected="false"
+                            onclick="cambiarFiltroTicketsAdmin('open', this)">
+                            Abiertos <span id="count-open">0</span>
+                        </button>
+                        <button class="admin-ticket-filter" data-filter="closed" role="tab" aria-selected="false"
+                            onclick="cambiarFiltroTicketsAdmin('closed', this)">
+                            Cerrados <span id="count-closed">0</span>
+                        </button>
                     </div>
-                    <div class="ticket-list" id="ticket-list-open"></div>
-                </div>
 
-                <div class="admin-ticket-col col-closed">
-                    <div class="admin-col-header">
-                        <span class="col-label"><i class="bi bi-check-circle-fill"></i> Cerrados</span>
-                        <span class="col-count" id="count-closed">0</span>
+                    <div class="admin-ticket-list-heading">
+                        <span id="admin-ticket-list-title">Sin responder</span>
+                        <span id="admin-ticket-result-count">0 consultas</span>
                     </div>
-                    <div class="ticket-list" id="ticket-list-closed"></div>
-                </div>
-            </div>
+                    <div class="ticket-list" id="admin-ticket-list"></div>
+                </aside>
 
-        </div>
-    </div>
+                <section class="admin-chat-box is-empty" id="admin-chat-panel" aria-live="polite">
+                    <div class="admin-chat-empty" id="admin-chat-empty">
+                        <span class="admin-chat-empty-icon"><i class="bi bi-chat-square-text"></i></span>
+                        <h3>Seleccioná una consulta</h3>
+                        <p>Elegí un ticket de la lista para ver el historial y responder.</p>
+                    </div>
 
-    <!-- ADMIN CHAT MODAL -->
-    <div id="admin-chat-modal">
-        <div class="admin-chat-box">
+                    <div class="admin-chat-content" id="admin-chat-content">
+                        <div class="admin-chat-header">
+                            <button class="admin-chat-back" onclick="closeAdminChatModal()" aria-label="Volver a la lista">
+                                <i class="bi bi-arrow-left"></i>
+                            </button>
+                            <div class="admin-chat-heading">
+                                <span class="admin-chat-status" id="admin-chat-status">Abierto</span>
+                                <h3 id="admin-chat-title">Consulta</h3>
+                                <span class="admin-chat-subtitle" id="admin-chat-subtitle"></span>
+                            </div>
+                            <div class="admin-chat-header-actions">
+                                <button class="btn-cerrar-ticket" id="btn-cerrar-ticket-admin" onclick="cerrarTicketAdmin()">
+                                    <i class="bi bi-check2-circle"></i> Cerrar ticket
+                                </button>
+                            </div>
+                        </div>
 
-            <div class="admin-chat-header">
-                <div>
-                    <h3 id="admin-chat-title">Consulta</h3>
-                    <span class="admin-chat-subtitle" id="admin-chat-subtitle"></span>
-                </div>
-                <div class="admin-chat-header-actions">
-                    <button class="btn-cerrar-ticket" id="btn-cerrar-ticket-admin" onclick="cerrarTicketAdmin()">
-                        Cerrar ticket
-                    </button>
-                    <button class="admin-chat-close" onclick="closeAdminChatModal()">
-                        <i class="bi bi-x-lg"></i>
-                    </button>
-                </div>
-            </div>
+                        <div class="admin-chat-messages" id="admin-chat-messages"></div>
 
-            <div class="admin-chat-messages" id="admin-chat-messages"></div>
-
-            <div class="admin-chat-input">
-                <input type="text" id="admin-chat-input-msg" placeholder="Escribí tu respuesta..."
-                    onkeydown="if(event.key==='Enter') enviarMensajeAdmin()">
-                <button onclick="enviarMensajeAdmin()">Enviar</button>
+                        <div class="admin-chat-input">
+                            <input type="text" id="admin-chat-input-msg" placeholder="Escribí tu respuesta..."
+                                aria-label="Respuesta al ticket" onkeydown="if(event.key==='Enter') enviarMensajeAdmin()">
+                            <button onclick="enviarMensajeAdmin()" aria-label="Enviar respuesta">
+                                <i class="bi bi-send-fill"></i><span>Enviar</span>
+                            </button>
+                        </div>
+                    </div>
+                </section>
             </div>
 
         </div>
@@ -560,7 +574,7 @@
     <div class="app" id="home-view">
 
         <!-- SIDEBAR -->
-        <aside class="sidebar">
+        <aside class="sidebar" aria-label="Navegación principal">
 
             <div class="logo mb-5">
                 FIVOX
@@ -570,38 +584,38 @@
                 <div class="menu">
 
                     <button id="btn-usuarios" style="display:none;">
-                        <i class="bi bi-people-fill me-2"></i>
-                        Usuarios
+                        <i class="bi bi-people-fill"></i>
+                        <span>Usuarios</span>
                     </button>
 
                     <button id="btn-support-admin" style="display:none;">
-                        <i class="bi bi-chat-dots-fill me-2"></i>
-                        Soporte
+                        <i class="bi bi-chat-dots-fill"></i>
+                        <span>Soporte</span>
                     </button>
 
                     <button id="btn-calificar" style="display:none;">
-                        <i class="bi bi-star-fill me-2"></i>
-                        Calificar servicios
+                        <i class="bi bi-star-fill"></i>
+                        <span>Calificar servicios</span>
                     </button>
 
-                    <button id="btn-mis-servicios">
-                        <i class="bi bi-briefcase-fill me-2"></i>
-                        Mis Servicios
+                    <button id="btn-mis-servicios" class="menu-active" aria-current="page">
+                        <i class="bi bi-briefcase-fill"></i>
+                        <span>Mis Servicios</span>
                     </button>
 
                     <button id="btn-admin-servicios" style="display:none;">
-                        <i class="bi bi-grid-fill me-2"></i>
-                        Administrar Servicios
+                        <i class="bi bi-grid-fill"></i>
+                        <span>Administrar Servicios</span>
                     </button>
 
                     <button id="btn-terms">
-                        <i class="bi bi-file-earmark-text-fill me-2"></i>
-                        Términos y Condiciones
+                        <i class="bi bi-file-earmark-text-fill"></i>
+                        <span>Términos y Condiciones</span>
                     </button>
 
                     <button id="btn-logout" class="logout-btn">
-                        <i class="bi bi-box-arrow-right me-2"></i>
-                        Cerrar sesión
+                        <i class="bi bi-box-arrow-right"></i>
+                        <span>Cerrar sesión</span>
                     </button>
 
                 </div>
@@ -614,19 +628,19 @@
 
             <!-- FLOATING BUTTONS -->
             <div class="floating-icons">
-                <button class="float-icon" id="btn-open-profile">
+                <button class="float-icon" id="btn-open-profile" aria-label="Abrir mi perfil" title="Mi perfil">
                     <i class="bi bi-person-fill"></i>
                 </button>
 
-                <button class="float-icon" id="btn-reportes" style="display:none;">
+                <button class="float-icon" id="btn-reportes" style="display:none;" aria-label="Abrir reportes" title="Reportes">
                     <i class="bi bi-file-earmark-bar-graph-fill"></i>
                 </button>
 
-                <button class="float-icon" id="btn-open-create">
+                <button class="float-icon float-icon-primary" id="btn-open-create" aria-label="Crear publicación" title="Crear publicación">
                     <i class="bi bi-plus-lg"></i>
                 </button>
 
-                <button class="float-icon" id="btn-support">
+                <button class="float-icon" id="btn-support" aria-label="Abrir soporte" title="Soporte">
                     <i class="bi bi-chat-dots-fill"></i>
                 </button>
             </div>
@@ -641,9 +655,10 @@
 
                     <p>Encontrá profesionales cerca tuyo</p>
 
-                    <div class="search">
-                        <input type="text" placeholder="Ej: plomero, programador, profesor particular...">
-                        <button>
+                    <div class="search" role="search">
+                        <i class="bi bi-search search-leading" aria-hidden="true"></i>
+                        <input type="search" aria-label="Buscar servicios" placeholder="Plomero, programador, profesor particular…">
+                        <button aria-label="Buscar">
                             <i class="bi bi-search"></i>
                         </button>
                     </div>
@@ -651,7 +666,7 @@
                 </section>
 
                 <!-- CATEGORIAS -->
-                <div class="categories-scroll">
+                <div class="categories-scroll" id="categories-scroll">
 
                     <div class="home-card" data-category="Técnicos">
                         <i class="bi bi-tools home-card-icon"></i>
@@ -691,13 +706,14 @@
 
                 </div>
 
+                <div class="categories-scrollbar" role="scrollbar" aria-label="Desplazar filtros de servicios"
+                    aria-controls="categories-scroll" aria-orientation="horizontal" aria-valuemin="0"
+                    aria-valuemax="100" aria-valuenow="0" tabindex="0">
+                    <span class="categories-scrollbar-thumb"></span>
+                </div>
+
                 <!-- PUBLICACIONES -->
-                <section>
-
-                    <div class="section-title">
-                        <h3>Publicaciones</h3>
-                    </div>
-
+                <section class="home-posts-section" aria-label="Publicaciones">
                     <!-- POSTS -->
                     <div id="posts-container" class="row g-4">
                     </div>
@@ -844,7 +860,7 @@
 
     </div>
 
-    <script src="/js/home.js"></script>
+    <script src="/js/home.js?v=20260928-3"></script>
 
 </body>
 

@@ -1,8 +1,20 @@
 pipeline {
     agent any
 
+    options {
+        skipDefaultCheckout(true)
+        disableConcurrentBuilds()
+        timestamps()
+    }
+
+    triggers {
+        githubPush()
+        pollSCM('H/5 * * * *')
+    }
+
     environment {
         NODE_ENV = 'test'
+        CI = 'true'
     }
 
     stages {
@@ -15,45 +27,45 @@ pipeline {
 
         stage('Install dependencies') {
             steps {
-                sh 'npm install'
+                sh 'npm ci && npm --prefix frontend ci'
             }
         }
 
         stage('Typecheck') {
             steps {
-                sh 'npm run typecheck'
+                sh 'npm run typecheck && npm run frontend:typecheck'
             }
         }
 
         stage('Build') {
             steps {
-                sh 'npm run build'
+                sh 'npm run build && npm run frontend:build'
             }
         }
 
         stage('Test') {
- 	   steps {
-      		  sh 'node --import tsx --test $(find tests -name "*.test.ts")'
-   	 
+            steps {
+                sh 'npm test'
             }
         }
 
         stage('Package') {
             steps {
-                archiveArtifacts artifacts: 'dist/**', fingerprint: true
+                sh 'npm run package:ci'
+                archiveArtifacts artifacts: 'artifacts/**, dist/**', fingerprint: true
             }
         }
     }
 
     post {
         success {
-            echo 'Build y tests OK. Artefacto listo.'
+            echo 'Validaciones y builds completados. Artefactos disponibles en Jenkins.'
         }
         failure {
             echo 'El pipeline falló. Revisar el log de la etapa correspondiente.'
         }
         always {
-            cleanWs()
+            deleteDir()
         }
     }
 }

@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import type { Request, Response } from 'express';
 import jwt, { type SignOptions } from 'jsonwebtoken';
 import type { PoolConnection, RowDataPacket } from 'mysql2/promise';
+import cloudinary from '../config/cloudinary';
 import pool from '../config/db';
 import { procedureRows, selectRows } from '../types/database';
 
@@ -317,6 +318,36 @@ export const updateProfile = async (
       ok: false,
       message: 'Error interno del servidor.',
     });
+  }
+};
+
+export const uploadAvatar = async (req: Request, res: Response) => {
+  if (!req.file) {
+    return res.status(400).json({ ok: false, message: 'No se recibió ninguna imagen.' });
+  }
+
+  try {
+    const result = await new Promise<{ secure_url: string }>((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        {
+          folder: 'fivox/avatars',
+          public_id: `user-${req.user.id_user}`,
+          overwrite: true,
+          resource_type: 'image',
+          transformation: [{ width: 500, height: 500, crop: 'fill', gravity: 'face' }],
+        },
+        (error, uploaded) => {
+          if (error || !uploaded) reject(error || new Error('Cloudinary no devolvió la imagen.'));
+          else resolve(uploaded);
+        },
+      );
+      stream.end(req.file?.buffer);
+    });
+
+    return res.status(200).json({ ok: true, data: { url: result.secure_url } });
+  } catch (error) {
+    console.error('Error al subir avatar:', error);
+    return res.status(500).json({ ok: false, message: 'No se pudo subir la imagen. Intentá de nuevo.' });
   }
 };
 

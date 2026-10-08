@@ -1,0 +1,14 @@
+import { useCallback, useEffect, useState } from 'react';
+import { authorizedRequest } from '../api/client';
+import { Alert } from '../components/Alert';
+import { ModalShell } from './ModalShell';
+import type { Post } from './types';
+
+type Props = { token: string; onClose: () => void; onChanged: () => Promise<void> };
+export function ModerationModal({ token, onClose, onChanged }: Props) {
+  const [posts, setPosts] = useState<Post[]>([]); const [loading, setLoading] = useState(true); const [error, setError] = useState<string | null>(null); const [rejecting, setRejecting] = useState<Post | null>(null); const [reason, setReason] = useState('');
+  const load = useCallback(() => authorizedRequest<Post[]>('/posts/pending', token).then((response) => setPosts(response.data)).catch((cause: Error) => setError(cause.message)).finally(() => setLoading(false)), [token]);
+  useEffect(() => { void load(); }, [load]);
+  async function moderate(post: Post, status: 1 | 3, rejectionReason?: string) { try { await authorizedRequest<unknown>(`/posts/${post.id_post}/status`, token, { method: 'PUT', body: JSON.stringify({ status, reason: rejectionReason || null }) }); setRejecting(null); setReason(''); await Promise.all([load(), onChanged()]); } catch (cause) { setError(cause instanceof Error ? cause.message : 'No se pudo moderar la publicación.'); } }
+  return <ModalShell title="Administrar Servicios" subtitle={`${posts.length} publicaciones pendientes de revisión.`} onClose={onClose} size="large">{error && <Alert tone="danger">{error}</Alert>}{loading ? <div className="modal-loading">Cargando publicaciones…</div> : posts.length ? <div className="moderation-list">{posts.map((post) => <article className="moderation-row" key={post.id_post}><div className="admin-post-thumb">{post.image_url ? <img src={post.image_url} alt="" /> : <i className="bi bi-image" />}</div><div className="moderation-copy"><span>{post.category} · {post.author}</span><h3>{post.title}</h3><p>{post.description}</p></div><div className="moderation-actions"><button className="positive-action" type="button" onClick={() => moderate(post, 1)}>Aprobar</button><button className="danger-action" type="button" onClick={() => setRejecting(post)}>Rechazar</button></div></article>)}</div> : <div className="empty-state compact-empty"><i className="bi bi-check-circle" /><h3>Todo al día</h3><p>No hay publicaciones pendientes.</p></div>}{rejecting && <div className="inline-editor reject-editor"><label>Motivo del rechazo<textarea rows={3} value={reason} onChange={(event) => setReason(event.target.value)} /></label><button className="secondary-button" type="button" onClick={() => setRejecting(null)}>Cancelar</button><button className="danger-button" type="button" disabled={!reason.trim()} onClick={() => moderate(rejecting, 3, reason.trim())}>Confirmar rechazo</button></div>}</ModalShell>;
+}

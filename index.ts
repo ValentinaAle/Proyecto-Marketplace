@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 import cors from 'cors';
 import express from 'express';
@@ -21,6 +22,8 @@ const allowedOrigins = [
   `http://127.0.0.1:${PORT}`,
   'http://localhost:5500',
   'http://127.0.0.1:5500',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
 ].filter(Boolean);
 
 /* ─────────────────────────────────────────
@@ -65,23 +68,28 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
+app.use((error: Error & { code?: string; name?: string }, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (error.name === 'MulterError' || error.message.includes('Formato de imagen')) {
+    const message = error.code === 'LIMIT_FILE_SIZE'
+      ? 'La imagen no puede superar los 5 MB.'
+      : error.message;
+    return res.status(400).json({ ok: false, message });
+  }
+  return next(error);
+});
+
 /* ─────────────────────────────────────────
    Frontend estático
 ───────────────────────────────────────── */
 const publicDir = path.join(process.cwd(), 'public');
 const htmlDir   = path.join(publicDir, 'html');
+const reactDist = path.join(process.cwd(), 'frontend', 'dist');
+const reactIndex = path.join(reactDist, 'index.html');
 
 const htmlPages = {
-  '/':                  'index.html',
-  '/login':             'index.html',
-  '/index.html':        'index.html',
-  '/home':              'home.html',
+  '/home-legacy':       'home.html',
   '/home.html':         'home.html',
   '/html/home.html':    'home.html',
-  '/register':          'register.html',
-  '/register.html':     'register.html',
-  '/forgot-password':   'forgot-password.html',
-  '/forgot-password.html': 'forgot-password.html',
 };
 
 Object.entries(htmlPages).forEach(([route, file]) => {
@@ -98,6 +106,23 @@ Object.entries(htmlPages).forEach(([route, file]) => {
 });
 
 app.use(express.static(publicDir));
+
+if (existsSync(reactIndex)) {
+  app.use(express.static(reactDist));
+  ['/', '/login', '/register', '/forgot-password', '/home', '/home-react'].forEach((route) => {
+    app.get(route, (_req, res) => res.sendFile(reactIndex));
+  });
+} else {
+  const legacyAuthPages = {
+    '/': 'index.html',
+    '/login': 'index.html',
+    '/register': 'register.html',
+    '/forgot-password': 'forgot-password.html',
+  };
+  Object.entries(legacyAuthPages).forEach(([route, file]) => {
+    app.get(route, (_req, res) => res.sendFile(path.join(htmlDir, file)));
+  });
+}
 
 app.use((req, res) => {
   if (req.path.startsWith('/api/')) {

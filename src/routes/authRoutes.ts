@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import * as authController from '../controllers/authController';
 import authMiddleware from '../middlewares/auth';
+import upload from '../middlewares/upload';
 
 const router = Router();
 
@@ -15,5 +16,6 @@ router.get('/me', authMiddleware, authController.me);
 
 router.put('/profile', authMiddleware, authController.updateProfile);
 router.put('/password', authMiddleware, authController.changePassword);
+router.post('/avatar', authMiddleware, upload.single('avatar'), authController.uploadAvatar);
 
 export default router;
