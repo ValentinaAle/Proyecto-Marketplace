@@ -110,7 +110,7 @@ router.get('/admin/tickets', authMiddleware, requireAdmin, async (req, res) => {
   }
 });
 
-// PUT /api/support/tickets/:id/close — cerrar ticket
+// PUT /api/support/tickets/:id/close — cerrar ticket como admin
 router.put<{ id: string }>('/tickets/:id/close', authMiddleware, requireAdmin, async (req, res) => {
   try {
     await pool.execute('CALL sp_close_ticket(?)', [req.params.id]);
