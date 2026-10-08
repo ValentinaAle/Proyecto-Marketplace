@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
 import { authorizedRequest, uploadImage } from '../api/client';
 import { Alert } from '../components/Alert';
+import { ConfirmationDialog } from '../components/ConfirmationDialog';
 import { PostDetail } from './PostDetail';
 import type { Category, Post } from './types';
 
@@ -37,6 +38,7 @@ export function MyServicesView({ token, categories, onChanged }: Props) {
   const [date, setDate] = useState('');
   const [sort, setSort] = useState<SortKey>('newest');
   const [preview, setPreview] = useState<Post | null>(null);
+  const [postToRemove, setPostToRemove] = useState<Post | null>(null);
   const [editing, setEditing] = useState<Post | null>(null);
   const [fields, setFields] = useState<EditFields>({ title: '', description: '', image_url: '', id_category: '' });
   const [loading, setLoading] = useState(true);
@@ -75,9 +77,9 @@ export function MyServicesView({ token, categories, onChanged }: Props) {
   }
 
   async function remove(post: Post) {
-    if (!window.confirm('¿Eliminar esta publicación inactiva?')) return;
     try {
       await authorizedRequest<unknown>(`/posts/my/${post.id_post}`, token, { method: 'DELETE' });
+      setPostToRemove(null);
       await load(); await onChanged();
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'No se pudo eliminar la publicación.'); }
   }
@@ -151,9 +153,10 @@ export function MyServicesView({ token, categories, onChanged }: Props) {
 
       {loading ? <div className="modal-loading">Cargando publicaciones…</div> : visible.length ? <div className="my-services-grid">{visible.map((post) => <article className="post-card my-service-card" key={post.id_post}>
         <div className="post-image">{post.image_url ? <img src={post.image_url} alt="" /> : <i className="bi bi-image" />}<span className={`service-status ${meta.className}`}>{meta.label}</span></div>
-        <div className="post-body"><span className="post-category">{post.category}</span><h3>{post.title}</h3><time>{post.created_at ? new Date(post.created_at).toLocaleDateString('es-AR') : 'Sin fecha'}</time>{tab === 'rejected' && post.rejection_reason && <p className="rejection-reason"><i className="bi bi-info-circle-fill" /> {post.rejection_reason}</p>}<div className="my-service-actions"><button type="button" onClick={() => setPreview(post)}><i className="bi bi-eye" /> Vista previa</button><button type="button" onClick={() => startEditing(post)}><i className="bi bi-pencil" /> Editar</button>{tab === 'approved' && <button type="button" onClick={() => changeStatus(post, 0)}>Desactivar</button>}{tab === 'inactive' && <><button className="positive-action" type="button" onClick={() => changeStatus(post, 1)}>Activar</button><button className="danger-action" type="button" onClick={() => remove(post)}>Eliminar</button></>}</div></div>
+        <div className="post-body"><span className="post-category">{post.category}</span><h3>{post.title}</h3><time>{post.created_at ? new Date(post.created_at).toLocaleDateString('es-AR') : 'Sin fecha'}</time>{tab === 'rejected' && post.rejection_reason && <p className="rejection-reason"><i className="bi bi-info-circle-fill" /> {post.rejection_reason}</p>}<div className="my-service-actions"><button type="button" onClick={() => setPreview(post)}><i className="bi bi-eye" /> Vista previa</button><button type="button" onClick={() => startEditing(post)}><i className="bi bi-pencil" /> Editar</button>{tab === 'approved' && <button type="button" onClick={() => changeStatus(post, 0)}>Desactivar</button>}{tab === 'inactive' && <><button className="positive-action" type="button" onClick={() => changeStatus(post, 1)}>Activar</button><button className="danger-action" type="button" onClick={() => setPostToRemove(post)}>Eliminar</button></>}</div></div>
       </article>)}</div> : <div className="empty-state compact-empty"><i className="bi bi-inbox" /><h3>Sin resultados</h3><p>No hay servicios que coincidan con estos filtros.</p></div>}
     </div>
     {preview && <PostDetail post={{ ...preview, author: 'Vista previa' }} preview onClose={() => setPreview(null)} />}
+    {postToRemove && <ConfirmationDialog title="¿Eliminar esta publicación?" message={`“${postToRemove.title}” se eliminará de forma permanente.`} confirmLabel="Eliminar publicación" tone="danger" onCancel={() => setPostToRemove(null)} onConfirm={() => void remove(postToRemove)} />}
   </section>;
 }
