@@ -14,6 +14,7 @@ import { PostCard } from '../home/PostCard';
 import { PostDetail } from '../home/PostDetail';
 import { ProfileModal } from '../home/ProfileModal';
 import { ReportsModal } from '../home/ReportsModal';
+import { ReviewsModal, type ServiceContact } from '../home/ReviewsModal';
 import { Sidebar } from '../home/Sidebar';
 import { SupportModal } from '../home/SupportModal';
 import { TermsModal } from '../home/TermsModal';
@@ -30,8 +31,10 @@ export function HomePage() {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
+  const [contacts, setContacts] = useState<ServiceContact[]>([]);
+  const [reviewSuggestionDismissed, setReviewSuggestionDismissed] = useState(false);
   const [activeView, setActiveView] = useState<'publications' | 'services'>('publications');
-  const [activeModal, setActiveModal] = useState<'profile' | 'create' | 'support' | 'users' | 'moderation' | 'terms' | 'reports' | null>(null);
+  const [activeModal, setActiveModal] = useState<'profile' | 'create' | 'support' | 'users' | 'moderation' | 'terms' | 'reports' | 'reviews' | null>(null);
   const categoryStrip = useRef<HTMLDivElement>(null);
   const postsSection = useRef<HTMLElement>(null);
   const searchInput = useRef<HTMLInputElement>(null);
@@ -41,14 +44,25 @@ export function HomePage() {
     : activeModal === 'support' ? 'Soporte'
       : activeModal === 'moderation' ? 'Administrar Servicios'
         : activeModal === 'terms' ? 'Términos y Condiciones'
+          : activeModal === 'reviews' ? 'Calificar servicios'
           : activeView === 'services' ? 'Mis Servicios'
             : 'Publicaciones';
 
   const refreshPosts = useCallback(async () => {
     if (!token) return;
-    const response = await authorizedRequest<Post[]>('/posts', token);
-    setPosts(response.data);
+    const [postResponse, categoryResponse] = await Promise.all([
+      authorizedRequest<Post[]>('/posts', token),
+      authorizedRequest<Category[]>('/posts/categories', token),
+    ]);
+    setPosts(postResponse.data);
+    setCategories(categoryResponse.data);
   }, [token]);
+
+  const refreshContacts = useCallback(async () => {
+    if (!token || user?.role === 'ADMIN') return;
+    const response = await authorizedRequest<ServiceContact[]>('/reviews/my-contacts', token);
+    setContacts(response.data);
+  }, [token, user?.role]);
 
   useEffect(() => {
     if (!token) return;
@@ -62,6 +76,10 @@ export function HomePage() {
       setMessage(error instanceof Error ? error.message : 'No se pudo cargar el home.');
     }).finally(() => setLoading(false));
   }, [token]);
+
+  useEffect(() => { void refreshContacts().catch(() => undefined); }, [refreshContacts]);
+
+  const pendingReviews = useMemo(() => contacts.filter((contact) => Number(contact.days_since_contact) >= 3 && !Number(contact.already_reviewed)), [contacts]);
 
   const visiblePosts = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase('es');
@@ -85,6 +103,7 @@ export function HomePage() {
     if (label === 'Mi perfil') { setActiveModal('profile'); return; }
     if (label === 'Crear publicación') { setActiveModal('create'); return; }
     if (label === 'Mis Servicios') { setActiveModal(null); setActiveView('services'); homeMain.current?.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+    if (label === 'Calificar servicios') { void refreshContacts().catch(() => undefined); setActiveModal('reviews'); setReviewSuggestionDismissed(true); return; }
     if (label === 'Soporte') { setActiveModal('support'); return; }
     if (label === 'Usuarios') { setActiveModal('users'); return; }
     if (label === 'Administrar Servicios') { setActiveModal('moderation'); return; }
@@ -114,10 +133,11 @@ export function HomePage() {
 
   return (
     <div className="home-frame">
-      <Sidebar user={user} activeItem={activeSidebarItem} onLegacyAction={legacyNotice} onLogout={logout} />
+      <Sidebar user={user} activeItem={activeSidebarItem} reviewCount={pendingReviews.length} onLegacyAction={legacyNotice} onLogout={logout} />
       <main className="home-main" ref={homeMain}>
         <FloatingActions isAdmin={user.role === 'ADMIN'} onAction={legacyNotice} />
         <div className="home-content">
+          {pendingReviews.length > 0 && !reviewSuggestionDismissed && activeView === 'publications' && <aside className="review-suggestion" aria-label="Servicio pendiente de confirmación"><i className="bi bi-star-fill" /><div><strong>¿Finalmente contrataste {pendingReviews.length === 1 ? `“${pendingReviews[0].post_title}”` : 'alguno de estos servicios'}?</strong><span>Confirmalo para poder calificar tu experiencia.</span></div><button className="primary-button" type="button" onClick={() => { setActiveModal('reviews'); setReviewSuggestionDismissed(true); }}>Revisar ahora</button><button className="review-suggestion-close" type="button" aria-label="Cerrar sugerencia" onClick={() => setReviewSuggestionDismissed(true)}><i className="bi bi-x-lg" /></button></aside>}
           {activeView === 'publications' ? <>
           <section className="home-hero">
             <h1>¿Qué servicio necesitás?</h1>
@@ -151,7 +171,7 @@ export function HomePage() {
         </div>
       </main>
       {user.role !== 'ADMIN' && <Chatbot searchRef={searchInput} onAction={legacyNotice} />}
-      {selectedPost && <PostDetail post={selectedPost} token={token} canContact={user.role !== 'ADMIN'} onCategorySelect={filterFromDetail} onClose={() => setSelectedPost(null)} />}
+      {selectedPost && <PostDetail post={selectedPost} token={token} canContact={user.role !== 'ADMIN'} onContactRegistered={() => { void refreshContacts().catch(() => undefined); }} onCategorySelect={filterFromDetail} onClose={() => setSelectedPost(null)} />}
       {activeModal === 'profile' && <ProfileModal token={token} onClose={() => setActiveModal(null)} onSaved={handleProfileSaved} />}
       {activeModal === 'create' && <CreatePostModal token={token} categories={categories} onClose={() => setActiveModal(null)} onCreated={handleCreated} />}
       {activeModal === 'support' && <SupportModal token={token} user={user} onClose={() => setActiveModal(null)} />}
@@ -159,6 +179,7 @@ export function HomePage() {
       {activeModal === 'moderation' && <ModerationModal token={token} onClose={() => setActiveModal(null)} onChanged={refreshPosts} />}
       {activeModal === 'terms' && <TermsModal token={token} user={user} onClose={() => setActiveModal(null)} />}
       {activeModal === 'reports' && <ReportsModal token={token} posts={posts} onClose={() => setActiveModal(null)} />}
+      {activeModal === 'reviews' && <ReviewsModal token={token} contacts={contacts} onClose={() => setActiveModal(null)} onChanged={refreshContacts} onReviewPublished={async () => { await refreshPosts(); setActiveModal(null); setMessage('¡Gracias! Tu calificación fue publicada.'); }} />}
     </div>
   );
 }

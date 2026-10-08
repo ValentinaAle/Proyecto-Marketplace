@@ -10,3 +10,7 @@ ALTER TABLE support_tickets
   ADD COLUMN last_read_at DATETIME NULL,
   ADD COLUMN last_read_admin_at DATETIME NULL,
   ADD COLUMN last_message_at DATETIME NULL;
+
+ALTER TABLE posts
+  ADD COLUMN rejection_reason VARCHAR(255) NULL AFTER is_active,
+  ADD COLUMN proposed_category VARCHAR(45) NULL AFTER id_category;
