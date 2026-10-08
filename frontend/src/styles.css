@@ -163,6 +163,55 @@ input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px 
 .post-meta { min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 12px; }
 .post-meta > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .post-rating { flex: 0 0 auto; color: #95630a; font-weight: 600; }
+.nav-badge { margin-left: auto; min-width: 20px; height: 20px; display: inline-grid; place-items: center; padding: 0 6px; border-radius: 10px; background: var(--accent); color: #fff; font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.review-suggestion { position: relative; display: flex; align-items: center; gap: 14px; margin-bottom: 22px; padding: 14px 48px 14px 16px; border: 1px solid rgba(149,99,10,.2); border-radius: 12px; background: #fffaf0; box-shadow: 0 8px 24px rgba(61,45,18,.07), 0 1px 2px rgba(61,45,18,.08); color: #704b08; }
+.review-suggestion > i { font-size: 22px; }
+.review-suggestion > div { flex: 1; display: grid; gap: 2px; }
+.review-suggestion strong { color: var(--ink); font-size: 14px; }
+.review-suggestion span { color: var(--muted); font-size: 12px; }
+.review-suggestion .primary-button { min-height: 38px; }
+.review-suggestion-close { position: absolute; top: 9px; right: 9px; width: 30px; height: 30px; border: 0; background: transparent; color: var(--muted); cursor: pointer; }
+
+.reviews-modal .form-modal-content { background: #f5f7f6; }
+.review-list { display: grid; gap: 10px; }
+.review-service { display: grid; grid-template-columns: 64px minmax(0,1fr) auto; align-items: center; gap: 14px; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: #fff; box-shadow: 0 1px 2px rgba(22,39,35,.04); }
+.review-service.is-ready { border-color: rgba(149,99,10,.3); }
+.review-service-image { width: 64px; height: 58px; display: grid; place-items: center; overflow: hidden; border-radius: 9px; background: #e4ebe8; color: var(--accent-strong); font-size: 20px; }
+.review-service-image img { width: 100%; height: 100%; object-fit: cover; }
+.review-service-copy { min-width: 0; display: grid; gap: 4px; }
+.review-service-copy h3 { margin: 0; overflow: hidden; color: var(--ink); font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+.review-service-copy p { margin: 0; color: var(--muted); font-size: 11px; }
+.review-status { display: flex; align-items: center; gap: 5px; color: var(--muted); font-size: 11px; font-weight: 600; }
+.review-status.is-ready { color: #95630a; }
+.review-status.is-complete { color: var(--accent-strong); }
+.review-service-action button { min-height: 38px; }
+.review-service-action button:disabled { border: 0; background: transparent; color: var(--muted); font-size: 11px; }
+.review-question, .review-rating-panel { grid-column: 1 / -1; display: grid; gap: 10px; margin-top: 2px; padding: 14px; border-radius: 10px; background: #edf2f0; }
+.review-question strong, .review-rating-panel strong { color: var(--ink); font-size: 14px; }
+.review-question p { margin: -5px 0 0; color: var(--muted); font-size: 12px; }
+.review-question > div, .review-rating-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.review-rating-panel > div:first-child { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.review-rating-panel > div:first-child span { color: #95630a; font-size: 12px; font-weight: 600; }
+.star-rating { display: flex; justify-content: center; gap: 5px; }
+.star-rating button { width: 44px; height: 44px; border: 0; border-radius: 8px; background: transparent; color: #b27a13; font-size: 25px; cursor: pointer; }
+.star-rating button:hover, .star-rating button:focus-visible { background: #fff7e6; outline: 2px solid rgba(178,122,19,.35); outline-offset: 1px; }
+.review-error { display: flex; gap: 8px; margin-bottom: 12px; padding: 10px 12px; border-radius: 8px; background: #fff0ef; color: #9d2921; font-size: 12px; }
+.review-empty { min-height: 230px; display: grid; place-items: center; align-content: center; gap: 8px; text-align: center; }
+.review-empty > i { color: #b27a13; font-size: 30px; }
+.review-empty h3, .review-empty p { margin: 0; }
+.review-empty p { max-width: 430px; color: var(--muted); font-size: 13px; line-height: 1.55; }
+
+@media (max-width: 640px) {
+  .review-suggestion { align-items: flex-start; flex-wrap: wrap; }
+  .review-suggestion .primary-button { width: 100%; }
+  .review-service { grid-template-columns: 54px minmax(0,1fr); }
+  .review-service-image { width: 54px; height: 52px; }
+  .review-service-action { grid-column: 1 / -1; }
+  .review-service-action .primary-button { width: 100%; }
+  .review-question > div, .review-rating-actions { flex-direction: column-reverse; }
+  .review-question button, .review-rating-actions button { width: 100%; }
+}
 .post-rating small { color: var(--muted); font-weight: 400; }
 .post-skeleton { height: 270px; border-radius: 14px; background: linear-gradient(90deg,#d6dfdc 25%,#e8eeec 50%,#d6dfdc 75%); background-size: 200% 100%; animation: skeleton 1.3s infinite linear; }
 @keyframes skeleton { to { background-position: -200% 0; } }

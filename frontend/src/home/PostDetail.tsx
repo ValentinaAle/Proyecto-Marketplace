@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { authorizedRequest } from '../api/client';
 import type { Post } from './types';
 
-type PostDetailProps = { post: Post; token?: string; preview?: boolean; canContact?: boolean; onCategorySelect?: (category: string) => void; onClose: () => void };
+type PostDetailProps = { post: Post; token?: string; preview?: boolean; canContact?: boolean; onContactRegistered?: () => void; onCategorySelect?: (category: string) => void; onClose: () => void };
 
 function whatsappNumber(phone: string) {
   const digits = phone.replace(/\D/g, '').replace(/^0+/, '');
@@ -10,7 +10,7 @@ function whatsappNumber(phone: string) {
   return digits;
 }
 
-export function PostDetail({ post, token, preview = false, canContact = false, onCategorySelect, onClose }: PostDetailProps) {
+export function PostDetail({ post, token, preview = false, canContact = false, onContactRegistered, onCategorySelect, onClose }: PostDetailProps) {
   useEffect(() => {
     function closeOnEscape(event: KeyboardEvent) { if (event.key === 'Escape') onClose(); }
     window.addEventListener('keydown', closeOnEscape);
@@ -22,7 +22,7 @@ export function PostDetail({ post, token, preview = false, canContact = false, o
 
   function registerContact() {
     if (!token || preview) return;
-    void authorizedRequest<unknown>('/reviews/contact', token, { method: 'POST', body: JSON.stringify({ id_post: post.id_post }) }).catch(() => undefined);
+    void authorizedRequest<unknown>('/reviews/contact', token, { method: 'POST', body: JSON.stringify({ id_post: post.id_post }) }).then(() => onContactRegistered?.()).catch(() => undefined);
   }
 
   return (

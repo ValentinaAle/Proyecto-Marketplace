@@ -3,6 +3,7 @@ import type { SessionUser } from '../auth/session';
 type SidebarProps = {
   user: SessionUser;
   activeItem: string;
+  reviewCount?: number;
   onLegacyAction: (label: string) => void;
   onLogout: () => void;
 };
@@ -19,7 +20,7 @@ const items: Item[] = [
   { label: 'Administrar Servicios', icon: 'bi-grid-fill', adminOnly: true },
 ];
 
-export function Sidebar({ user, activeItem, onLegacyAction, onLogout }: SidebarProps) {
+export function Sidebar({ user, activeItem, reviewCount = 0, onLegacyAction, onLogout }: SidebarProps) {
   const isAdmin = user.role === 'ADMIN';
   const visibleItems = items.filter((item) => (!item.adminOnly || isAdmin) && (!item.userOnly || !isAdmin));
 
@@ -31,6 +32,7 @@ export function Sidebar({ user, activeItem, onLegacyAction, onLogout }: SidebarP
           <button key={item.label} className={activeItem === item.label ? 'is-active' : undefined} type="button" aria-current={activeItem === item.label ? 'page' : undefined} onClick={() => onLegacyAction(item.label)}>
             <i className={`bi ${item.icon}`} aria-hidden="true" />
             <span>{item.label}</span>
+            {item.label === 'Calificar servicios' && reviewCount > 0 && <span className="nav-badge" aria-label={`${reviewCount} servicio${reviewCount === 1 ? '' : 's'} para calificar`}>{reviewCount}</span>}
           </button>
         ))}
         <button className="logout-action" type="button" onClick={onLogout}>
