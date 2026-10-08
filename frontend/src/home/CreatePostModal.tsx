@@ -47,7 +47,7 @@ export function CreatePostModal({ token, categories, onClose, onCreated }: Props
     } finally { setLoading(false); }
   }
 
-  return <ModalShell title="Nueva publicación" subtitle="Tu servicio quedará pendiente de aprobación." onClose={onClose} footer={<><button className="secondary-button" type="button" onClick={onClose}>Cancelar</button><button className="primary-button modal-primary" type="submit" form="create-post-form" disabled={loading || uploading}>{loading ? 'Publicando…' : 'Publicar'}</button></>}>
+  return <ModalShell title="Nueva publicación" subtitle="Tu servicio quedará pendiente de aprobación." onClose={onClose} className="form-modal--gray-header" footer={<><button className="secondary-button" type="button" onClick={onClose}>Cancelar</button><button className="primary-button modal-primary" type="submit" form="create-post-form" disabled={loading || uploading}>{loading ? 'Publicando…' : 'Publicar'}</button></>}>
     {error && <Alert tone="danger">{error}</Alert>}
     <form id="create-post-form" className="stacked-form" onSubmit={submit}>
       <label>Título <span className="field-count">{fields.title.length}/45</span><input maxLength={45} value={fields.title} onChange={(event) => update('title', event.target.value)} placeholder="Ej: Instalación eléctrica domiciliaria" /></label>
