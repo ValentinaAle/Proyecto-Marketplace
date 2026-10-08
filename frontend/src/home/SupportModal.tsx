@@ -120,7 +120,7 @@ export function SupportModal({ token, user, onClose }: Props) {
     return 'is-open';
   }
 
-  return <ModalShell title={isAdmin ? 'Centro de soporte' : 'Mis consultas'} subtitle={isAdmin ? 'Gestioná y respondé las consultas de la comunidad.' : 'Contactate con el equipo de FIVOX.'} onClose={onClose} size="large" className="form-modal--support" contentClassName="form-modal-content--support" headerContent={<label className="ticket-search ticket-search--header"><i className="bi bi-search" /><input type="search" aria-label="Buscar consulta" placeholder="Buscar consulta…" value={query} onChange={(event) => setQuery(event.target.value)} /></label>}>
+  return <ModalShell title={isAdmin ? 'Centro de soporte' : 'Mis consultas'} subtitle={isAdmin ? 'Gestioná y respondé las consultas de la comunidad.' : 'Contactate con el equipo de FIVOX.'} onClose={onClose} size="large" className="form-modal--support form-modal--gray-header" contentClassName="form-modal-content--support" headerContent={<label className="ticket-search ticket-search--header"><i className="bi bi-search" /><input type="search" aria-label="Buscar consulta" placeholder="Buscar consulta…" value={query} onChange={(event) => setQuery(event.target.value)} /></label>}>
     {error && <Alert tone="danger">{error}</Alert>}
     <div className={selected || newTicket ? 'support-workspace has-detail' : 'support-workspace'}>
       <aside className="ticket-browser">
