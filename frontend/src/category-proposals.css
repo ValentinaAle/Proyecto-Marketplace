@@ -1,0 +1,21 @@
+.proposed-category-field > small { margin-top: -1px; color: var(--muted); font-size: 10px; font-weight: 500; line-height: 1.5; }
+.proposed-category-badge { width: max-content; display: inline-flex; align-items: center; gap: 5px; margin-top: 5px; padding: 4px 7px; border-radius: 7px; background: #fff4d7; color: #7b5208; font-size: 9px; }
+.category-review-editor { align-items: stretch; flex-direction: column; }
+.category-review-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.category-review-heading > div { display: grid; gap: 2px; }
+.category-review-heading span { color: var(--muted); font-size: 10px; }
+.category-review-heading strong { color: var(--ink); font-size: 15px; }
+.category-review-heading > button { width: 32px; height: 32px; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: var(--muted); cursor: pointer; }
+.category-review-heading > button:hover { background: #dce6e3; color: var(--ink); }
+.category-review-options { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+.category-review-options label { display: flex; align-items: flex-start; gap: 9px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: #fff; cursor: pointer; }
+.category-review-options label.is-selected { border-color: var(--accent); background: #e2f0ec; box-shadow: 0 0 0 2px rgba(22,143,125,.12); }
+.category-review-options input { width: auto; margin-top: 2px; accent-color: var(--accent-strong); }
+.category-review-options span { display: grid; gap: 2px; }
+.category-review-options small { color: var(--muted); font-size: 9px; font-weight: 500; line-height: 1.4; }
+.category-review-editor > label input, .category-review-editor > label select { width: 100%; min-height: 40px; padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px; background: #fff; font: inherit; }
+.inline-editor-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+@media (max-width: 600px) {
+  .category-review-options { grid-template-columns: 1fr; }
+}

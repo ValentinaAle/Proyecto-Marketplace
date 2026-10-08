@@ -19,6 +19,7 @@ export interface Post {
   rejection_reason?: string | null;
   created_at?: string;
   id_category?: number;
+  proposed_category?: string | null;
 }
 
 export interface Profile {
