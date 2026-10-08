@@ -121,7 +121,17 @@ export function MyServicesView({ token, categories, onChanged }: Props) {
   const meta = statusMeta[tab];
 
   return <section className="my-services-view" aria-labelledby="my-services-title">
-    <header className="workspace-heading"><div><h1 id="my-services-title">Mis Servicios</h1><p>Revisá, filtrá y editá tus publicaciones desde un solo lugar.</p></div></header>
+    <header className="workspace-heading my-services-heading">
+      <div><h1 id="my-services-title">Mis Servicios</h1><p>Revisá, filtrá y editá tus publicaciones desde un solo lugar.</p></div>
+      <div className="service-filters-panel">
+        <div className="service-toolbar">
+          <label className="service-search"><i className="bi bi-search" /><input type="search" aria-label="Buscar por nombre" placeholder="Buscar por nombre…" value={query} onChange={(event) => setQuery(event.target.value)} /></label>
+          <label className="service-date"><span>Fecha</span><input type="date" value={date} onChange={(event) => setDate(event.target.value)} /></label>
+          <label className="service-sort"><span>Orden</span><select value={sort} onChange={(event) => setSort(event.target.value as SortKey)}><option value="newest">Más recientes</option><option value="oldest">Más antiguas</option><option value="name">Nombre A–Z</option></select></label>
+          {(query || date) && <button className="clear-service-filters" type="button" onClick={() => { setQuery(''); setDate(''); }}>Limpiar</button>}
+        </div>
+      </div>
+    </header>
     <div className="my-services-content">
       {error && <Alert tone="danger">{error}</Alert>}
       {notice && <Alert tone="success">{notice}</Alert>}
@@ -138,13 +148,6 @@ export function MyServicesView({ token, categories, onChanged }: Props) {
       </form>}
 
       <div className="service-tabs" role="tablist">{tabs.map((item) => <button key={item.key} className={tab === item.key ? 'is-active' : ''} type="button" role="tab" aria-selected={tab === item.key} onClick={() => { setTab(item.key); setEditing(null); }}>{item.label}<span>{posts.filter((post) => item.statuses.includes(Number(post.is_active))).length}</span></button>)}</div>
-
-      <div className="service-toolbar">
-        <label className="service-search"><i className="bi bi-search" /><input type="search" aria-label="Buscar por nombre" placeholder="Buscar por nombre…" value={query} onChange={(event) => setQuery(event.target.value)} /></label>
-        <label className="service-date"><span>Fecha</span><input type="date" value={date} onChange={(event) => setDate(event.target.value)} /></label>
-        <label className="service-sort"><span>Orden</span><select value={sort} onChange={(event) => setSort(event.target.value as SortKey)}><option value="newest">Más recientes</option><option value="oldest">Más antiguas</option><option value="name">Nombre A–Z</option></select></label>
-        {(query || date) && <button className="clear-service-filters" type="button" onClick={() => { setQuery(''); setDate(''); }}>Limpiar</button>}
-      </div>
 
       {loading ? <div className="modal-loading">Cargando publicaciones…</div> : visible.length ? <div className="my-services-grid">{visible.map((post) => <article className="post-card my-service-card" key={post.id_post}>
         <div className="post-image">{post.image_url ? <img src={post.image_url} alt="" /> : <i className="bi bi-image" />}<span className={`service-status ${meta.className}`}>{meta.label}</span></div>
