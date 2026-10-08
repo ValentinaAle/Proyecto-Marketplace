@@ -44,7 +44,7 @@ CREATE TABLE `users` (
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES (1,'admin@test.com','$2a$10$voOWNc.GwFZHVIh4LrxS7.bUNt6Sx9USh8hqtx2dDW86UZJlrBHOi','2026-05-11 23:26:13',1,NULL,0),(2,'user@test.com','hash_seller_123','2026-05-11 23:26:13',1,NULL,0),(5,'test@fivox.com','$2a$10$JeixWEmETlHXelxi5JIU/.yqEY/Lwj8ZPQuRuY1Dpf1ZcVa/XBqba','2026-07-02 17:42:14',1,'11456280',1),(6,'valentina.tatianaale2@gmail.com','$2a$10$jaI1RmsO1A0eYGxyHCYZGewWht8TrcVB4SyaUjbhmXqUdJdmk95O6','2026-08-27 15:16:33',1,'02364728763',1);
+INSERT INTO `users` VALUES (1,'admin@test.com','$2a$10$ev/t3rt9wfrBHxRud3LJD.EaHEMmS9PYF92hkGxlbshs/0hKWbY6u','2026-05-11 23:26:13',1,NULL,0),(2,'user@test.com','$2a$10$TNDRgWfMGBv2d9pHMSO2f.reEhTKU/H4ycWfT8vkCDsGWLtuy.vTa','2026-05-11 23:26:13',1,NULL,0),(5,'test@fivox.com','$2a$10$JeixWEmETlHXelxi5JIU/.yqEY/Lwj8ZPQuRuY1Dpf1ZcVa/XBqba','2026-07-02 17:42:14',1,'11456280',1),(6,'valentina.tatianaale2@gmail.com','$2a$10$jaI1RmsO1A0eYGxyHCYZGewWht8TrcVB4SyaUjbhmXqUdJdmk95O6','2026-08-27 15:16:33',1,'02364728763',1);
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -58,5 +58,4 @@ UNLOCK TABLES;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
 -- Dump completed on 2026-09-28 11:36:22
-
 

@@ -18,6 +18,7 @@ pipeline {
     }
 
     stages {
+
         stage('Checkout') {
             steps {
                 checkout scm
@@ -26,63 +27,46 @@ pipeline {
 
         stage('Install dependencies') {
             steps {
-                script {
-                    if (isUnix()) {
-                        sh 'npm ci && npm --prefix frontend ci'
-                    } else {
-                        bat 'npm ci && npm --prefix frontend ci'
-                    }
-                }
+                sh 'npm ci && npm --prefix frontend ci'
             }
         }
 
-        stage('Test') {
+        stage('Typecheck') {
             steps {
-                script {
-                    if (isUnix()) {
-                        sh 'npm test'
-                    } else {
-                        bat 'npm test'
-                    }
-                }
+                sh 'npm run typecheck && npm run frontend:typecheck'
             }
         }
 
         stage('Build') {
             steps {
-                script {
-                    if (isUnix()) {
-                        sh 'npm run frontend:build'
-                    } else {
-                        bat 'npm run frontend:build'
-                    }
-                }
+                sh 'npm run build && npm run frontend:build'
+            }
+        }
+
+        stage('Test') {
+            steps {
+                sh 'npm test'
             }
         }
 
         stage('Package') {
             steps {
-                script {
-                    if (isUnix()) {
-                        sh 'npm run package:ci'
-                    } else {
-                        bat 'npm run package:ci'
-                    }
-                }
-                archiveArtifacts artifacts: 'artifacts/**', fingerprint: true
+                sh 'npm run package:ci'
+                archiveArtifacts artifacts: 'artifacts/**, dist/**', fingerprint: true
             }
         }
     }
 
     post {
         success {
-            echo 'Validaciones y build completados. Artefactos disponibles en Jenkins.'
+            echo 'Validaciones y builds completados. Artefactos disponibles en Jenkins.'
         }
         failure {
-            echo 'El pipeline fallo. Revisar el log de la etapa marcada en rojo.'
+            echo 'El pipeline falló. Revisar el log de la etapa correspondiente.'
         }
         always {
             deleteDir()
         }
     }
 }
+

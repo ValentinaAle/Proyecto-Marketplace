@@ -1,11 +1,25 @@
 // src/routes/postRoutes.js
-const express        = require('express');
-const router         = express.Router();
-const authMiddleware = require('../middlewares/auth');
-const requireAdmin   = require('../middlewares/requireAdmin');
-const pool           = require('../config/db');
-const upload         = require('../middlewares/upload');
-const cloudinary     = require('../config/cloudinary');
+import { Router } from 'express';
+import type { ResultSetHeader, RowDataPacket } from 'mysql2/promise';
+import cloudinary from '../config/cloudinary';
+import pool from '../config/db';
+import authMiddleware from '../middlewares/auth';
+import requireAdmin from '../middlewares/requireAdmin';
+import upload from '../middlewares/upload';
+import { procedureRows } from '../types/database';
+
+const router = Router();
+
+interface CreatePostBody {
+  title?: string;
+  description?: string;
+  image_url?: string;
+  id_category?: number;
+}
+
+interface UpdateStatusBody { status?: number; reason?: string }
+interface UpdatePostBody { title?: string; description?: string; image_url?: string }
+interface UpdateOwnPostBody extends UpdatePostBody { id_category?: number }
 
 router.post('/image', authMiddleware, upload.single('image'), async (req, res) => {
   if (!req.file) {
@@ -13,16 +27,19 @@ router.post('/image', authMiddleware, upload.single('image'), async (req, res) =
   }
 
   try {
-    const result = await new Promise((resolve, reject) => {
+    const result = await new Promise<{ secure_url: string }>((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
         {
           folder: 'fivox/posts',
           resource_type: 'image',
           transformation: [{ width: 1200, height: 1200, crop: 'limit' }],
         },
-        (error, uploaded) => error ? reject(error) : resolve(uploaded)
+        (error, uploaded) => {
+          if (error || !uploaded) reject(error || new Error('Cloudinary no devolvió la imagen.'));
+          else resolve(uploaded);
+        },
       );
-      stream.end(req.file.buffer);
+      stream.end(req.file?.buffer);
     });
 
     return res.status(200).json({ ok: true, data: { url: result.secure_url } });
@@ -46,8 +63,8 @@ router.get('/categories', authMiddleware, async (req, res) => {
 // GET /api/posts
 router.get('/', authMiddleware, async (req, res) => {
   try {
-    const [rows] = await pool.execute('CALL sp_get_posts()');
-    return res.status(200).json({ ok: true, data: rows[0] });
+    const [result] = await pool.execute('CALL sp_get_posts()');
+    return res.status(200).json({ ok: true, data: procedureRows<RowDataPacket>(result) });
   } catch (error) {
     console.error('Error en sp_get_posts:', error);
     return res.status(500).json({ ok: false, message: 'Error al obtener publicaciones.' });
@@ -56,7 +73,7 @@ router.get('/', authMiddleware, async (req, res) => {
 
 
 // POST /api/posts
-router.post('/', authMiddleware, async (req, res) => {
+router.post<Record<string, never>, unknown, CreatePostBody>('/', authMiddleware, async (req, res) => {
   const { title, description, image_url, id_category } = req.body;
 
   if (!title || !description || !id_category) {
@@ -80,26 +97,18 @@ router.post('/', authMiddleware, async (req, res) => {
 // GET /api/posts/my — mis posts (usuario)
 router.get('/my', authMiddleware, async (req, res) => {
   try {
-    const [rows] = await pool.execute(
-      `SELECT p.id_post, p.title, p.description, p.image_url, p.created_at,
-              p.is_active, p.rejection_reason, p.id_category, c.name AS category
-       FROM posts p
-       INNER JOIN categories c ON c.id_category = p.id_category
-       WHERE p.id_user = ?
-       ORDER BY p.created_at DESC`,
-      [req.user.id_user]
-    );
-    return res.status(200).json({ ok: true, data: rows });
+    const [result] = await pool.execute('CALL sp_get_my_posts(?)', [req.user.id_user]);
+    return res.status(200).json({ ok: true, data: procedureRows<RowDataPacket>(result) });
   } catch (error) {
-    console.error('Error al obtener publicaciones propias:', error);
+    console.error('Error en sp_get_my_posts:', error);
     return res.status(500).json({ ok: false, message: 'Error al obtener tus posts.' });
   }
 });
 
-// PUT /api/posts/my/:id — editar una publicación propia
-router.put('/my/:id', authMiddleware, async (req, res) => {
+router.put<{ id: string }, unknown, UpdateOwnPostBody>('/my/:id', authMiddleware, async (req, res) => {
   const { title, description, image_url, id_category } = req.body;
-  if (!title?.trim() || !description?.trim() || !Number(id_category)) {
+  const categoryId = Number(id_category);
+  if (!title?.trim() || !description?.trim() || !categoryId) {
     return res.status(400).json({ ok: false, message: 'Título, descripción y categoría son obligatorios.' });
   }
   if (title.trim().length > 45 || description.trim().length > 300) {
@@ -107,15 +116,22 @@ router.put('/my/:id', authMiddleware, async (req, res) => {
   }
 
   try {
-    const [[category]] = await pool.execute('SELECT id_category FROM categories WHERE id_category = ? LIMIT 1', [id_category]);
-    if (!category) return res.status(400).json({ ok: false, message: 'La categoría seleccionada no existe.' });
+    const [categoryResult] = await pool.execute(
+      'SELECT id_category FROM categories WHERE id_category = ? LIMIT 1',
+      [categoryId],
+    );
+    const categories = categoryResult as RowDataPacket[];
+    if (!categories[0]) {
+      return res.status(400).json({ ok: false, message: 'La categoría seleccionada no existe.' });
+    }
 
-    const [result] = await pool.execute(
+    const [updateResult] = await pool.execute(
       `UPDATE posts SET title = ?, description = ?, image_url = ?, id_category = ?,
        is_active = 2, rejection_reason = NULL
        WHERE id_post = ? AND id_user = ?`,
-      [title.trim(), description.trim(), image_url?.trim() || null, id_category, req.params.id, req.user.id_user]
+      [title.trim(), description.trim(), image_url?.trim() || null, categoryId, req.params.id, req.user.id_user],
     );
+    const result = updateResult as ResultSetHeader;
     if (!result.affectedRows) {
       return res.status(404).json({ ok: false, message: 'Publicación no encontrada.' });
     }
@@ -126,18 +142,18 @@ router.put('/my/:id', authMiddleware, async (req, res) => {
   }
 });
 
-// PUT /api/posts/my/:id/status — activar o desactivar una publicación propia
-router.put('/my/:id/status', authMiddleware, async (req, res) => {
+router.put<{ id: string }, unknown, { status?: number }>('/my/:id/status', authMiddleware, async (req, res) => {
   const status = Number(req.body.status);
   if (![0, 1].includes(status)) {
     return res.status(400).json({ ok: false, message: 'Estado inválido.' });
   }
 
   try {
-    const [result] = await pool.execute(
+    const [updateResult] = await pool.execute(
       'UPDATE posts SET is_active = ? WHERE id_post = ? AND id_user = ? AND is_active IN (0, 1)',
-      [status, req.params.id, req.user.id_user]
+      [status, req.params.id, req.user.id_user],
     );
+    const result = updateResult as ResultSetHeader;
     if (!result.affectedRows) {
       return res.status(404).json({ ok: false, message: 'Publicación no encontrada o pendiente de revisión.' });
     }
@@ -148,13 +164,13 @@ router.put('/my/:id/status', authMiddleware, async (req, res) => {
   }
 });
 
-// DELETE /api/posts/my/:id — eliminar una publicación propia inactiva
-router.delete('/my/:id', authMiddleware, async (req, res) => {
+router.delete<{ id: string }>('/my/:id', authMiddleware, async (req, res) => {
   try {
-    const [result] = await pool.execute(
+    const [deleteResult] = await pool.execute(
       'DELETE FROM posts WHERE id_post = ? AND id_user = ? AND is_active = 0',
-      [req.params.id, req.user.id_user]
+      [req.params.id, req.user.id_user],
     );
+    const result = deleteResult as ResultSetHeader;
     if (!result.affectedRows) {
       return res.status(404).json({ ok: false, message: 'Solo se pueden eliminar publicaciones propias inactivas.' });
     }
@@ -168,8 +184,8 @@ router.delete('/my/:id', authMiddleware, async (req, res) => {
 // GET /api/posts/pending — posts pendientes (admin)
 router.get('/pending', authMiddleware, requireAdmin, async (req, res) => {
   try {
-    const [rows] = await pool.execute('CALL sp_get_pending_posts()');
-    return res.status(200).json({ ok: true, data: rows[0] });
+    const [result] = await pool.execute('CALL sp_get_pending_posts()');
+    return res.status(200).json({ ok: true, data: procedureRows<RowDataPacket>(result) });
   } catch (error) {
     console.error('Error en sp_get_pending_posts:', error);
     return res.status(500).json({ ok: false, message: 'Error al obtener posts pendientes.' });
@@ -177,7 +193,7 @@ router.get('/pending', authMiddleware, requireAdmin, async (req, res) => {
 });
 
 // PUT /api/posts/:id/status — cambiar estado (admin)
-router.put('/:id/status', authMiddleware, requireAdmin, async (req, res) => {
+router.put<{ id: string }, unknown, UpdateStatusBody>('/:id/status', authMiddleware, requireAdmin, async (req, res) => {
   const { status, reason } = req.body;
   if (status === undefined) return res.status(400).json({ ok: false, message: 'Status requerido.' });
 
@@ -191,7 +207,7 @@ router.put('/:id/status', authMiddleware, requireAdmin, async (req, res) => {
 });
 
 // PUT /api/posts/:id — editar post (admin)
-router.put('/:id', authMiddleware, requireAdmin, async (req, res) => {
+router.put<{ id: string }, unknown, UpdatePostBody>('/:id', authMiddleware, requireAdmin, async (req, res) => {
   const { title, description, image_url } = req.body;
 
   if (!title || !description) {
@@ -211,7 +227,7 @@ router.put('/:id', authMiddleware, requireAdmin, async (req, res) => {
 });
 
 // DELETE /api/posts/:id — eliminar post (admin)
-router.delete('/:id', authMiddleware, requireAdmin, async (req, res) => {
+router.delete<{ id: string }>('/:id', authMiddleware, requireAdmin, async (req, res) => {
   try {
     await pool.execute('DELETE FROM posts WHERE id_post = ?', [req.params.id]);
     return res.status(200).json({ ok: true, message: 'Publicación eliminada.' });
@@ -221,4 +237,4 @@ router.delete('/:id', authMiddleware, requireAdmin, async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

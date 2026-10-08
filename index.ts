@@ -1,15 +1,17 @@
-require('dotenv').config();
-const path       = require('path');
-const express    = require('express');
-const cors       = require('cors');
-const pool       = require('./src/config/db');
-const authRoutes  = require('./src/routes/authRoutes');
-const postsRoutes = require('./src/routes/postsRoutes');
-const supportRoutes = require('./src/routes/supportRoutes');
-const termsRoutes = require('./src/routes/termsRoutes');
-const usersRoutes = require('./src/routes/usersRoutes');
-const passwordRoutes = require('./src/routes/passwordRoutes');
-const reviewsRoutes = require('./src/routes/reviewsRoutes');
+import 'dotenv/config';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
+import cors from 'cors';
+import express from 'express';
+import pool from './src/config/db';
+import authRoutes from './src/routes/authRoutes';
+import chatbotRoutes from './src/routes/chatbotRoutes';
+import passwordRoutes from './src/routes/passwordRoutes';
+import postsRoutes from './src/routes/postsRoutes';
+import reviewsRoutes from './src/routes/reviewsRoutes';
+import supportRoutes from './src/routes/supportRoutes';
+import termsRoutes from './src/routes/termsRoutes';
+import usersRoutes from './src/routes/usersRoutes';
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -49,6 +51,7 @@ app.use(express.urlencoded({ extended: true }));
    API
 ───────────────────────────────────────── */
 app.use('/api/auth', authRoutes);
+app.use('/api/chatbot', chatbotRoutes);
 app.use('/api/posts', postsRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/terms', termsRoutes);
@@ -65,38 +68,46 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
-app.use((error, req, res, next) => {
-  if (error?.name === 'MulterError' || error?.message?.includes('Formato de imagen')) {
+app.use((error: Error & { code?: string; name?: string }, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (error.name === 'MulterError' || error.message.includes('Formato de imagen')) {
     const message = error.code === 'LIMIT_FILE_SIZE'
       ? 'La imagen no puede superar los 5 MB.'
       : error.message;
     return res.status(400).json({ ok: false, message });
   }
-  next(error);
+  return next(error);
 });
 
 /* ─────────────────────────────────────────
    Frontend estático
 ───────────────────────────────────────── */
-const publicDir = path.join(__dirname, 'public');
+const publicDir = path.join(process.cwd(), 'public');
 const htmlDir   = path.join(publicDir, 'html');
-const reactDist = path.join(__dirname, 'frontend', 'dist');
+const reactDist = path.join(process.cwd(), 'frontend', 'dist');
 const reactIndex = path.join(reactDist, 'index.html');
 
 const htmlPages = {
   '/home-legacy':       'home.html',
   '/home.html':         'home.html',
+  '/html/home.html':    'home.html',
 };
 
 Object.entries(htmlPages).forEach(([route, file]) => {
   app.get(route, (req, res) => {
+    // Las páginas pueden contener información de una sesión autenticada.
+    // Evita que el navegador las restaure desde su caché al navegar atrás/adelante.
+    res.set({
+      'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+      Pragma: 'no-cache',
+      Expires: '0',
+    });
     res.sendFile(path.join(htmlDir, file));
   });
 });
 
 app.use(express.static(publicDir));
 
-if (require('fs').existsSync(reactIndex)) {
+if (existsSync(reactIndex)) {
   app.use(express.static(reactDist));
   ['/', '/login', '/register', '/forgot-password', '/home', '/home-react'].forEach((route) => {
     app.get(route, (_req, res) => res.sendFile(reactIndex));
@@ -123,8 +134,6 @@ app.use((req, res) => {
 /* ─────────────────────────────────────────
    Iniciar servidor
 ───────────────────────────────────────── */
-require('./src/config/db');
-
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
 });

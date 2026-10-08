@@ -1,24 +1,30 @@
 # FIVOX — Marketplace
 
-Proyecto con frontend React/TypeScript, backend Node.js/Express y MySQL.
+Proyecto con frontend HTML/CSS/JavaScript, backend Node.js/Express con TypeScript y MySQL.
 
-## Frontend React
+## Desarrollo del backend
 
-El frontend vive en `frontend/`. Login, registro, recuperación, home, perfil, publicaciones, soporte y herramientas administrativas ya usan React. La ruta principal es `/home`; durante la transición, la versión estática anterior queda disponible en `/home-legacy`.
+Se requiere Node.js 24 y npm. Instalar dependencias una vez con `npm install`.
 
-```powershell
-npm --prefix frontend install
-npm run frontend:dev
+```bash
+npm run dev       # servidor de desarrollo con recarga automática
+npm run typecheck # valida los tipos sin generar archivos
+npm test          # ejecuta las pruebas automatizadas
+npm run build     # compila TypeScript dentro de dist/
+npm start         # ejecuta el backend compilado
 ```
 
-Vite abre el frontend en `http://localhost:5173` y reenvía `/api` al backend de Express en `http://localhost:3000`.
+`npm start` requiere haber ejecutado antes `npm run build`. Las variables de
+entorno siguen siendo las mismas que se documentan en `.env.example`; la
+ejecución con Docker compila el backend automáticamente en una etapa separada.
 
-Para validar o generar el bundle de producción:
+### Asistente de ayuda
 
-```powershell
-npm run frontend:typecheck
-npm run frontend:build
-```
+El chatbot reconoce preguntas con variantes de mayúsculas, acentos y sinónimos.
+Sus temas cubren búsqueda y contacto de prestadores, publicación y estado de
+servicios, perfil y contraseñas, soporte y tickets, reseñas, reportes, términos,
+roles y problemas técnicos. Cuando corresponde, muestra un botón que abre la
+sección de la aplicación relacionada; para temas desconocidos deriva a soporte.
 
 ## Ejecutar con Docker
 
@@ -42,6 +48,20 @@ para ejecutar con Node no necesita modificarse.
 
 Abrir **http://localhost:8080**. Para cambiar el puerto, editar `FRONTEND_PORT`
 en `.env.docker` y ejecutar nuevamente el comando de inicio.
+
+Las cuentas locales incluidas para pruebas son:
+
+| Rol | Email | Contraseña |
+| --- | --- | --- |
+| Administrador | `admin@test.com` | `Admin123` |
+| Usuario | `user@test.com` | `Usuario123` |
+| Usuario | `usuario.prueba@fivox.local` | `PruebaFivox2026!` |
+| Administrador | `admin.prueba@fivox.local` | `PruebaFivox2026!` |
+| Usuario | `usuario.demo@fivox.local` | `DemoUsuario2026` |
+| Administrador | `admin.demo@fivox.local` | `DemoAdmin2026!` |
+
+Estas credenciales son sólo para desarrollo local y no deben reutilizarse en un
+entorno público.
 
 ### Qué se ejecuta
 
@@ -107,61 +127,27 @@ contraseña de aplicación de esa cuenta. El resto de la app puede usarse sin
 configurar correo. Las fuentes, Bootstrap y otros recursos CDN del frontend
 requieren conexión a Internet.
 
+### Segunda capa local de IA del chatbot (opcional)
+
+El chatbot responde primero mediante sus reglas locales. Si no reconoce una
+consulta, puede pedir una respuesta al modelo local de Ollama. No requiere una
+clave ni genera cargos por consulta. Instalar Ollama, descargar el modelo con
+`ollama pull llama3.2:3b` y configurar estas variables en `.env.docker`:
+
+```text
+OLLAMA_BASE_URL=http://host.docker.internal:11434
+OLLAMA_MODEL=llama3.2:3b
+```
+
+Ollama debe estar ejecutándose en la computadora antes de iniciar la aplicación.
+Si el servicio local o el modelo no están disponibles, el chatbot conserva su
+respuesta de respaldo y deriva a soporte. La IA sólo responde y orienta; no
+ejecuta acciones como publicar, eliminar, cerrar tickets ni cambiar contraseñas.
+
+No se deben incluir contraseñas, códigos de recuperación, tokens u otros datos
+sensibles en las consultas del chatbot.
+
 ## Ejecución sin Docker
 
 Se conserva la ejecución original con `npm install` y `npm start`, usando las
 variables de conexión y JWT de `.env` y una base MySQL ya configurada.
-
-## Integración continua con Jenkins
-
-El `Jenkinsfile` de la raíz instala las dependencias con `npm ci`, valida la
-sintaxis del backend, ejecuta el chequeo de tipos del frontend, genera el bundle
-de Vite y publica el contenido de `artifacts/` como artefacto de Jenkins. El
-pipeline funciona en agentes Linux y Windows que tengan Node.js 22 o posterior,
-Git y npm disponibles en el `PATH`.
-
-Para ejecutar Jenkins en Docker con Node.js incluido:
-
-```powershell
-docker build -f docker/jenkins.Dockerfile -t fivox-jenkins:node22 .
-docker run -d --name jenkins --restart=on-failure `
-  -p 8080:8080 -p 50000:50000 `
-  -v jenkins_home:/var/jenkins_home `
-  fivox-jenkins:node22
-```
-
-El volumen `jenkins_home` conserva usuarios, plugins, credenciales y jobs aunque
-se reemplace el contenedor.
-
-Para crear el job:
-
-1. Crear un **Pipeline** (o **Multibranch Pipeline**) y seleccionar
-   **Pipeline script from SCM**.
-2. Configurar el repositorio y las credenciales de GitHub, con `Jenkinsfile`
-   como **Script Path**.
-3. Instalar los plugins Pipeline, Git y GitHub. El trigger `githubPush()` espera
-   un webhook de GitHub dirigido a `https://SERVIDOR/github-webhook/`.
-4. Ejecutar una primera compilación manual para comprobar el agente y luego
-   hacer un push para verificar el webhook.
-
-Mientras Jenkins se ejecute únicamente en `localhost`, el pipeline también usa
-`pollSCM('H/5 * * * *')`: Jenkins consulta GitHub aproximadamente cada cinco
-minutos y sólo inicia un build cuando detecta un commit nuevo. La `H` distribuye
-la consulta dentro del intervalo para evitar que todos los jobs se ejecuten al
-mismo segundo.
-
-Las mismas validaciones pueden ejecutarse localmente con:
-
-```powershell
-npm ci
-npm --prefix frontend ci
-npm test
-npm run frontend:build
-npm run package:ci
-```
-
-Actualmente `npm test` cubre la validación sintáctica del backend y el chequeo
-de tipos del frontend. Cuando se agregue una suite de pruebas unitarias o de
-integración, debe incorporarse a ese script para que Jenkins corte el pipeline
-ante cualquier prueba fallida. El despliegue no se automatiza todavía porque el
-repositorio no define un servidor o ambiente de destino.

@@ -1,25 +1,41 @@
-const express        = require('express');
-const router         = express.Router();
-const authMiddleware = require('../middlewares/auth');
-const requireAdmin   = require('../middlewares/requireAdmin');
-const pool           = require('../config/db');
+import { Router } from 'express';
+import type { RowDataPacket } from 'mysql2/promise';
+import pool from '../config/db';
+import authMiddleware from '../middlewares/auth';
+import requireAdmin from '../middlewares/requireAdmin';
+import { procedureRows, selectRows } from '../types/database';
 
-const ensureTicketAccess = async (ticketId, userId) => {
-  const [rows] = await pool.execute(
+interface TicketRow extends RowDataPacket {
+  id_ticket: number;
+}
+
+interface TicketAccessRow extends RowDataPacket {
+  id_user: number;
+  is_admin: number;
+}
+
+const router = Router();
+
+interface SubjectBody { subject?: string }
+interface MessageBody { message?: string }
+
+const ensureTicketAccess = async (ticketId: string, userId: number): Promise<boolean> => {
+  const [result] = await pool.execute(
     `SELECT t.id_ticket, t.id_user,
       EXISTS(SELECT 1 FROM users_roles ur INNER JOIN roles r ON r.id_role = ur.id_role
              WHERE ur.id_user = ? AND r.name = 'ADMIN') AS is_admin
      FROM support_tickets t WHERE t.id_ticket = ?`,
     [userId, ticketId]
   );
-  return rows[0] && (rows[0].id_user === userId || rows[0].is_admin === 1);
+  const ticket = selectRows<TicketAccessRow>(result)[0];
+  return Boolean(ticket && (ticket.id_user === userId || ticket.is_admin === 1));
 };
 
 // GET /api/support/tickets — tickets del usuario
 router.get('/tickets', authMiddleware, async (req, res) => {
   try {
-    const [rows] = await pool.execute('CALL sp_get_tickets(?)', [req.user.id_user]);
-    return res.status(200).json({ ok: true, data: rows[0] });
+    const [result] = await pool.execute('CALL sp_get_tickets(?)', [req.user.id_user]);
+    return res.status(200).json({ ok: true, data: procedureRows<RowDataPacket>(result) });
   } catch (error) {
     console.error('Error en sp_get_tickets:', error);
     return res.status(500).json({ ok: false, message: 'Error al obtener tickets.' });
@@ -27,13 +43,15 @@ router.get('/tickets', authMiddleware, async (req, res) => {
 });
 
 // POST /api/support/tickets — crear ticket
-router.post('/tickets', authMiddleware, async (req, res) => {
+router.post<Record<string, never>, unknown, SubjectBody>('/tickets', authMiddleware, async (req, res) => {
   const { subject } = req.body;
   if (!subject) return res.status(400).json({ ok: false, message: 'El asunto es requerido.' });
 
   try {
-    const [rows] = await pool.execute('CALL sp_create_ticket(?, ?)', [subject, req.user.id_user]);
-    const id_ticket = rows[0][0].id_ticket;
+    const [result] = await pool.execute('CALL sp_create_ticket(?, ?)', [subject, req.user.id_user]);
+    const ticket = procedureRows<TicketRow>(result)[0];
+    if (!ticket) throw new Error('No se pudo recuperar el ticket creado.');
+    const id_ticket = ticket.id_ticket;
 
     // Mensaje automático del admin
     await pool.execute('CALL sp_create_message(?, ?, ?)', [
@@ -51,13 +69,13 @@ router.post('/tickets', authMiddleware, async (req, res) => {
 
 
 // GET /api/support/tickets/:id/messages — mensajes de un ticket
-router.get('/tickets/:id/messages', authMiddleware, async (req, res) => {
+router.get<{ id: string }>('/tickets/:id/messages', authMiddleware, async (req, res) => {
   try {
     if (!await ensureTicketAccess(req.params.id, req.user.id_user)) {
       return res.status(404).json({ ok: false, message: 'Ticket no encontrado.' });
     }
-    const [rows] = await pool.execute('CALL sp_get_messages(?)', [req.params.id]);
-    return res.status(200).json({ ok: true, data: rows[0] });
+    const [result] = await pool.execute('CALL sp_get_messages(?)', [req.params.id]);
+    return res.status(200).json({ ok: true, data: procedureRows<RowDataPacket>(result) });
   } catch (error) {
     console.error('Error en sp_get_messages:', error);
     return res.status(500).json({ ok: false, message: 'Error al obtener mensajes.' });
@@ -65,7 +83,7 @@ router.get('/tickets/:id/messages', authMiddleware, async (req, res) => {
 });
 
 // POST /api/support/tickets/:id/messages — enviar mensaje
-router.post('/tickets/:id/messages', authMiddleware, async (req, res) => {
+router.post<{ id: string }, unknown, MessageBody>('/tickets/:id/messages', authMiddleware, async (req, res) => {
   const { message } = req.body;
   if (!message) return res.status(400).json({ ok: false, message: 'El mensaje es requerido.' });
 
@@ -84,8 +102,8 @@ router.post('/tickets/:id/messages', authMiddleware, async (req, res) => {
 // GET /api/support/admin/tickets — todos los tickets (admin)
 router.get('/admin/tickets', authMiddleware, requireAdmin, async (req, res) => {
   try {
-    const [rows] = await pool.execute('CALL sp_get_all_tickets()');
-    return res.status(200).json({ ok: true, data: rows[0] });
+    const [result] = await pool.execute('CALL sp_get_all_tickets()');
+    return res.status(200).json({ ok: true, data: procedureRows<RowDataPacket>(result) });
   } catch (error) {
     console.error('Error en sp_get_all_tickets:', error);
     return res.status(500).json({ ok: false, message: 'Error al obtener tickets.' });
@@ -93,7 +111,7 @@ router.get('/admin/tickets', authMiddleware, requireAdmin, async (req, res) => {
 });
 
 // PUT /api/support/tickets/:id/close — cerrar ticket
-router.put('/tickets/:id/close', authMiddleware, requireAdmin, async (req, res) => {
+router.put<{ id: string }>('/tickets/:id/close', authMiddleware, requireAdmin, async (req, res) => {
   try {
     await pool.execute('CALL sp_close_ticket(?)', [req.params.id]);
     return res.status(200).json({ ok: true, message: 'Ticket cerrado.' });
@@ -104,7 +122,7 @@ router.put('/tickets/:id/close', authMiddleware, requireAdmin, async (req, res) 
 });
 
 // PUT /api/support/tickets/:id/read
-router.put('/tickets/:id/read', authMiddleware, async (req, res) => {
+router.put<{ id: string }>('/tickets/:id/read', authMiddleware, async (req, res) => {
   try {
     await pool.execute(
       'UPDATE support_tickets SET last_read_at = NOW() WHERE id_ticket = ? AND id_user = ?',
@@ -118,7 +136,7 @@ router.put('/tickets/:id/read', authMiddleware, async (req, res) => {
 });
 
 // PUT /api/support/tickets/:id/read-admin
-router.put('/tickets/:id/read-admin', authMiddleware, requireAdmin, async (req, res) => {
+router.put<{ id: string }>('/tickets/:id/read-admin', authMiddleware, requireAdmin, async (req, res) => {
   try {
     await pool.execute(
       'UPDATE support_tickets SET last_read_admin_at = NOW() WHERE id_ticket = ?',
@@ -131,4 +149,4 @@ router.put('/tickets/:id/read-admin', authMiddleware, requireAdmin, async (req, 
   }
 });
 
-module.exports = router;
+export default router;

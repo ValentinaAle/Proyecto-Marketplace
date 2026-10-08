@@ -246,7 +246,7 @@ CREATE TABLE `users` (
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES (1,'admin@test.com','$2a$10$q./KIqQV19PIMzPWL6M84.8VWZY.kQWtG/.4GgEnCVmw45bF0.km2','2026-05-11 23:26:13',1,NULL,0),(2,'user@test.com','hash_seller_123','2026-05-11 23:26:13',0,NULL,0),(5,'test@fivox.com','$2a$10$mgryWYQlN9FfE/QR46l7..Za03CMEma8w8ltiSCvhpTgU8rntM10W','2026-07-02 17:42:14',1,'23658588',1),(6,'lud@test.com','$2a$10$FgFKYWzVm46XL635Bpo1JOSpSXFa7D7lXPZCi/v6BTyEJVYve3V0K','2026-07-06 21:52:59',1,'1234222222',1);
+INSERT INTO `users` VALUES (1,'admin@test.com','$2a$10$ev/t3rt9wfrBHxRud3LJD.EaHEMmS9PYF92hkGxlbshs/0hKWbY6u','2026-05-11 23:26:13',1,NULL,0),(2,'user@test.com','$2a$10$TNDRgWfMGBv2d9pHMSO2f.reEhTKU/H4ycWfT8vkCDsGWLtuy.vTa','2026-05-11 23:26:13',1,NULL,0),(5,'test@fivox.com','$2a$10$mgryWYQlN9FfE/QR46l7..Za03CMEma8w8ltiSCvhpTgU8rntM10W','2026-07-02 17:42:14',1,'23658588',1),(6,'lud@test.com','$2a$10$FgFKYWzVm46XL635Bpo1JOSpSXFa7D7lXPZCi/v6BTyEJVYve3V0K','2026-07-06 21:52:59',1,'1234222222',1);
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 
