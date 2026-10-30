@@ -5,14 +5,15 @@ import type { AuthData } from '../auth/session';
 import { ModalShell } from './ModalShell';
 import type { Profile } from './types';
 
-type Props = { token: string; onClose: () => void; onSaved: (session: AuthData) => Promise<void> };
+type Props = { token: string; notice?: string; onClose: () => void; onSaved: (session: AuthData) => Promise<void> };
 
-export function ProfileModal({ token, onClose, onSaved }: Props) {
+export function ProfileModal({ token, notice, onClose, onSaved }: Props) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [passwords, setPasswords] = useState({ oldPassword: '', newPassword: '' });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [passwordOpen, setPasswordOpen] = useState(false);
   const [alert, setAlert] = useState<{ tone: 'danger' | 'success'; message: string } | null>(null);
 
   useEffect(() => { authorizedRequest<Profile>('/auth/me', token).then((response) => setProfile(response.data)).catch((error: Error) => setAlert({ tone: 'danger', message: error.message })).finally(() => setLoading(false)); }, [token]);
@@ -34,6 +35,7 @@ export function ProfileModal({ token, onClose, onSaved }: Props) {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!profile?.name?.trim() || !profile.email.trim()) { setAlert({ tone: 'danger', message: 'Nombre y email son obligatorios.' }); return; }
+    if (notice && !profile.phone?.trim()) { setAlert({ tone: 'danger', message: 'Completá el teléfono para poder publicar.' }); return; }
     if ((passwords.oldPassword || passwords.newPassword) && (!passwords.oldPassword || passwords.newPassword.length < 6)) { setAlert({ tone: 'danger', message: 'Para cambiar la contraseña completá la actual y una nueva de al menos 6 caracteres.' }); return; }
     setSaving(true); setAlert(null);
     try {
@@ -46,11 +48,12 @@ export function ProfileModal({ token, onClose, onSaved }: Props) {
   }
 
   return <ModalShell title="Mi perfil" subtitle="Actualizá tus datos personales y de contacto." onClose={onClose} className="form-modal--gray-header" footer={<button className="primary-button modal-primary" type="submit" form="profile-form" disabled={saving || loading || uploading}>{saving ? 'Guardando…' : 'Guardar cambios'}</button>}>
+    {notice && !alert && <Alert tone="danger">{notice}</Alert>}
     {alert && <Alert tone={alert.tone}>{alert.message}</Alert>}
     {loading || !profile ? <div className="modal-loading">Cargando perfil…</div> : <form id="profile-form" className="stacked-form" onSubmit={submit}>
       <div className="profile-preview">{profile.avatar_url ? <img src={profile.avatar_url} alt="Avatar" /> : <span>{(profile.name || profile.email).slice(0, 1).toUpperCase()}</span>}<div><strong>{profile.name || 'Tu perfil'}</strong><small>{profile.email}</small></div></div>
       <div className="form-grid"><label>Nombre<input value={profile.name || ''} onChange={(event) => setProfile({ ...profile, name: event.target.value })} /></label><label>Email<input type="email" value={profile.email} onChange={(event) => setProfile({ ...profile, email: event.target.value })} /></label><label>Teléfono<input type="tel" value={profile.phone || ''} onChange={(event) => setProfile({ ...profile, phone: event.target.value })} /></label><label>Foto de perfil<span className="file-button profile-photo-button"><i className="bi bi-camera-fill" />{uploading ? 'Subiendo…' : 'Cambiar foto'}<input type="file" accept="image/jpeg,image/png,image/webp" disabled={uploading || loading || !profile} onChange={selectAvatar} /></span></label></div>
-      <div className="password-section"><h3>Cambiar contraseña</h3><p>Dejá estos campos vacíos si no querés modificarla.</p><div className="form-grid"><label>Contraseña actual<input type="password" autoComplete="current-password" value={passwords.oldPassword} onChange={(event) => setPasswords({ ...passwords, oldPassword: event.target.value })} /></label><label>Nueva contraseña<input type="password" autoComplete="new-password" value={passwords.newPassword} onChange={(event) => setPasswords({ ...passwords, newPassword: event.target.value })} /></label></div></div>
+      <div className={`password-section${passwordOpen ? ' is-open' : ''}`}><button className="password-section-toggle" type="button" aria-expanded={passwordOpen} onClick={() => setPasswordOpen((current) => !current)}><span><strong>Cambiar contraseña</strong><small>¿Deseás cambiarla?</small></span><i className={`bi ${passwordOpen ? 'bi-chevron-up' : 'bi-chevron-down'}`} aria-hidden="true" /></button>{passwordOpen && <><p>Completá ambos campos para modificarla.</p><div className="form-grid"><label>Contraseña actual<input type="password" autoComplete="current-password" value={passwords.oldPassword} onChange={(event) => setPasswords({ ...passwords, oldPassword: event.target.value })} /></label><label>Nueva contraseña<input type="password" autoComplete="new-password" value={passwords.newPassword} onChange={(event) => setPasswords({ ...passwords, newPassword: event.target.value })} /></label></div></>}</div>
     </form>}
   </ModalShell>;
 }

@@ -298,19 +298,37 @@ export const updateProfile = async (
   }
 
   try {
+    const updatedEmail = req.body.email?.trim() || req.user.email;
     await pool.execute(
       'CALL sp_update_profile(?, ?, ?)',
-      [req.user.id_user, name, avatar_url || null]
+      [req.user.id_user, name.trim(), avatar_url || null]
     );
 
     await pool.execute(
     'UPDATE users SET email = ?, phone = ? WHERE id_user = ?',
-    [req.body.email || req.user.email, phone || null, req.user.id_user]
+    [updatedEmail, phone?.trim() || null, req.user.id_user]
  );
+
+    const [roleResult] = await pool.execute(
+      'SELECT r.name FROM roles r INNER JOIN users_roles ur ON r.id_role = ur.id_role WHERE ur.id_user = ?',
+      [req.user.id_user],
+    );
+    const role = selectRows<RoleRow>(roleResult)[0]?.name || 'USER';
+    const token = generateToken(req.user.id_user, updatedEmail);
 
     return res.status(200).json({
       ok: true,
       message: 'Perfil actualizado correctamente.',
+      data: {
+        token,
+        user: {
+          id_user: req.user.id_user,
+          email: updatedEmail,
+          name: name.trim(),
+          avatar_url: avatar_url || null,
+          role,
+        },
+      },
     });
   } catch (error) {
     console.error('Error en updateProfile:', error);

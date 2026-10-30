@@ -51,6 +51,7 @@ export function ForgotPasswordPage() {
 
   return (
     <AuthLayout title={copy[0]} subtitle={copy[1]}>
+      <div className="auth-step-progress" aria-label={`Paso ${step === 'email' ? 1 : step === 'code' ? 2 : 3} de 3`}><span className={step !== 'email' ? 'is-complete' : 'is-current'}>1</span><i /><span className={step === 'password' ? 'is-complete' : step === 'code' ? 'is-current' : ''}>2</span><i /><span className={step === 'password' ? 'is-current' : ''}>3</span></div>
       {alert && <Alert tone={alert.tone}>{alert.message}</Alert>}
       <form onSubmit={submit} noValidate>
         {step === 'email' && <label>Email<input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} /></label>}
