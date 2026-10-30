@@ -11,6 +11,12 @@ export interface AuthData {
   user: SessionUser;
 }
 
+const rememberedEmailKey = 'fivox_remembered_email';
+
+export function getRememberedEmail(): string {
+  return localStorage.getItem(rememberedEmailKey) || '';
+}
+
 export function hasSession(): boolean {
   return Boolean(localStorage.getItem('fivox_token') || sessionStorage.getItem('fivox_token'));
 }
@@ -43,6 +49,8 @@ export function saveSession(data: AuthData, persistent = false): void {
   other.removeItem('fivox_user');
   target.setItem('fivox_token', data.token);
   target.setItem('fivox_user', JSON.stringify(data.user));
+  if (persistent) localStorage.setItem(rememberedEmailKey, data.user.email);
+  else localStorage.removeItem(rememberedEmailKey);
 }
 
 export function replaceSession(data: AuthData): void {
