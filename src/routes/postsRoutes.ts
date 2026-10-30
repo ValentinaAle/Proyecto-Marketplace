@@ -19,8 +19,9 @@ interface CreatePostBody {
 }
 
 interface UpdateStatusBody { status?: number; reason?: string; id_category?: number; category_name?: string }
-interface UpdatePostBody { title?: string; description?: string; image_url?: string }
+interface UpdatePostBody { title?: string; description?: string; image_url?: string; id_category?: number }
 interface UpdateOwnPostBody extends UpdatePostBody { id_category?: number }
+interface AvailabilityBody { active?: boolean; reason?: string }
 
 router.post('/image', authMiddleware, upload.single('image'), async (req, res) => {
   if (!req.file) {
@@ -87,6 +88,18 @@ router.post<Record<string, never>, unknown, CreatePostBody>('/', authMiddleware,
   }
 
   try {
+    const [profileResult] = await pool.execute(
+      `SELECT u.email, u.phone, pr.name
+       FROM users u
+       LEFT JOIN profiles pr ON pr.id_user = u.id_user
+       WHERE u.id_user = ? LIMIT 1`,
+      [req.user.id_user],
+    );
+    const profile = (profileResult as RowDataPacket[])[0];
+    if (!profile?.name?.trim() || !profile?.email?.trim() || !profile?.phone?.trim()) {
+      return res.status(400).json({ ok: false, message: 'Completá tu nombre, email y teléfono en Mi perfil antes de publicar.' });
+    }
+
     if (categoryId) {
       const [categoryResult] = await pool.execute('SELECT id_category FROM categories WHERE id_category = ? LIMIT 1', [categoryId]);
       if (!(categoryResult as RowDataPacket[])[0]) {
@@ -287,7 +300,7 @@ router.put<{ id: string }, unknown, UpdateStatusBody>('/:id/status', authMiddlew
 
 // PUT /api/posts/:id — editar post (admin)
 router.put<{ id: string }, unknown, UpdatePostBody>('/:id', authMiddleware, requireAdmin, async (req, res) => {
-  const { title, description, image_url } = req.body;
+  const { title, description, image_url, id_category } = req.body;
 
   if (!title || !description) {
     return res.status(400).json({ ok: false, message: 'Título y descripción son obligatorios.' });
@@ -295,13 +308,50 @@ router.put<{ id: string }, unknown, UpdatePostBody>('/:id', authMiddleware, requ
 
   try {
     await pool.execute(
-      'UPDATE posts SET title = ?, description = ?, image_url = ? WHERE id_post = ?',
-      [title, description, image_url || null, req.params.id]
+      `UPDATE posts SET title = ?, description = ?, image_url = ?,
+       id_category = COALESCE(?, id_category) WHERE id_post = ?`,
+      [title.trim(), description.trim(), image_url || null, Number(id_category) || null, req.params.id]
     );
     return res.status(200).json({ ok: true, message: 'Publicación actualizada.' });
   } catch (error) {
     console.error('Error al editar post:', error);
     return res.status(500).json({ ok: false, message: 'Error al editar la publicación.' });
+  }
+});
+
+router.put<{ id: string }, unknown, AvailabilityBody>('/:id/availability', authMiddleware, requireAdmin, async (req, res) => {
+  if (typeof req.body.active !== 'boolean') return res.status(400).json({ ok: false, message: 'Estado inválido.' });
+  const reason = req.body.reason?.trim() || '';
+  if (!req.body.active && !reason) return res.status(400).json({ ok: false, message: 'Indicá el motivo de la deshabilitación.' });
+  if (reason && reason.length > 255) return res.status(400).json({ ok: false, message: 'El motivo no puede superar los 255 caracteres.' });
+  try {
+    const [result] = await pool.execute<ResultSetHeader>(
+      'UPDATE posts SET is_active = ?, rejection_reason = ? WHERE id_post = ? AND is_active IN (0, 1)',
+      [req.body.active ? 1 : 0, req.body.active ? null : reason, req.params.id],
+    );
+    if (!result.affectedRows) return res.status(404).json({ ok: false, message: 'Publicación no encontrada o pendiente de revisión.' });
+    return res.status(200).json({ ok: true, message: req.body.active ? 'Publicación habilitada.' : 'Publicación deshabilitada.' });
+  } catch (error) {
+    console.error('Error al cambiar disponibilidad:', error);
+    return res.status(500).json({ ok: false, message: 'Error al actualizar la publicación.' });
+  }
+});
+
+// PUT /api/posts/:id/revision-request — solicitar cambios al autor (admin)
+router.put<{ id: string }, unknown, { reason?: string }>('/:id/revision-request', authMiddleware, requireAdmin, async (req, res) => {
+  const reason = req.body.reason?.trim();
+  if (!reason) return res.status(400).json({ ok: false, message: 'Indicá qué debería editar el usuario.' });
+  if (reason.length > 255) return res.status(400).json({ ok: false, message: 'La sugerencia no puede superar los 255 caracteres.' });
+  try {
+    const [result] = await pool.execute<ResultSetHeader>(
+      'UPDATE posts SET is_active = 4, rejection_reason = ? WHERE id_post = ? AND is_active = 1',
+      [reason, req.params.id],
+    );
+    if (!result.affectedRows) return res.status(404).json({ ok: false, message: 'La publicación no está disponible para solicitar una edición.' });
+    return res.status(200).json({ ok: true, message: 'Solicitud de edición enviada.' });
+  } catch (error) {
+    console.error('Error al solicitar edición de publicación:', error);
+    return res.status(500).json({ ok: false, message: 'Error al solicitar la edición.' });
   }
 });
 

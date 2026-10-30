@@ -5,23 +5,17 @@ import { ConfirmationDialog } from '../components/ConfirmationDialog';
 import { PostDetail } from './PostDetail';
 import type { Category, Post } from './types';
 
-type StatusKey = 'pending' | 'approved' | 'rejected' | 'inactive';
+type StatusKey = 'pending' | 'approved' | 'edit_required' | 'rejected' | 'inactive';
 type SortKey = 'newest' | 'oldest' | 'name';
 type EditFields = { title: string; description: string; image_url: string; id_category: string };
 
 const tabs: Array<{ key: StatusKey; label: string; statuses: number[] }> = [
   { key: 'pending', label: 'Pendientes', statuses: [2] },
   { key: 'approved', label: 'Publicadas', statuses: [1] },
+  { key: 'edit_required', label: 'A editar', statuses: [4] },
   { key: 'rejected', label: 'Rechazadas', statuses: [3] },
   { key: 'inactive', label: 'Inactivas', statuses: [0] },
 ];
-
-const statusMeta: Record<StatusKey, { label: string; className: string }> = {
-  pending: { label: 'Pendiente', className: 'is-pending' },
-  approved: { label: 'Publicada', className: 'is-approved' },
-  rejected: { label: 'Rechazada', className: 'is-rejected' },
-  inactive: { label: 'Inactiva', className: 'is-inactive' },
-};
 
 type Props = { token: string; categories: Category[]; onChanged: () => Promise<void> };
 
@@ -37,6 +31,7 @@ export function MyServicesView({ token, categories, onChanged }: Props) {
   const [query, setQuery] = useState('');
   const [date, setDate] = useState('');
   const [sort, setSort] = useState<SortKey>('newest');
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [preview, setPreview] = useState<Post | null>(null);
   const [postToRemove, setPostToRemove] = useState<Post | null>(null);
   const [editing, setEditing] = useState<Post | null>(null);
@@ -55,6 +50,7 @@ export function MyServicesView({ token, categories, onChanged }: Props) {
   useEffect(() => { void load(); }, [load]);
 
   const currentTab = tabs.find((item) => item.key === tab)!;
+  const activeFilterCount = Number(Boolean(query)) + Number(Boolean(date)) + Number(sort !== 'newest');
   const visible = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase('es');
     return posts
@@ -120,17 +116,16 @@ export function MyServicesView({ token, categories, onChanged }: Props) {
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'No se pudo editar la publicación.'); } finally { setSaving(false); }
   }
 
-  const meta = statusMeta[tab];
-
   return <section className="my-services-view" aria-labelledby="my-services-title">
     <header className="workspace-heading my-services-heading">
       <div><h1 id="my-services-title">Mis Servicios</h1><p>Revisá, filtrá y editá tus publicaciones desde un solo lugar.</p></div>
-      <div className="service-filters-panel">
+      <button className="mobile-filter-toggle" type="button" aria-expanded={filtersOpen} aria-controls="service-filter-controls" onClick={() => setFiltersOpen((current) => !current)}><i className="bi bi-sliders" aria-hidden="true" /> Filtros{activeFilterCount > 0 && <span>{activeFilterCount}</span>}<i className={`bi ${filtersOpen ? 'bi-chevron-up' : 'bi-chevron-down'}`} aria-hidden="true" /></button>
+      <div className={`service-filters-panel${filtersOpen ? ' is-open' : ''}`} id="service-filter-controls">
         <div className="service-toolbar">
           <label className="service-search"><i className="bi bi-search" /><input type="search" aria-label="Buscar por nombre" placeholder="Buscar por nombre…" value={query} onChange={(event) => setQuery(event.target.value)} /></label>
           <label className="service-date"><span>Fecha</span><input type="date" value={date} onChange={(event) => setDate(event.target.value)} /></label>
           <label className="service-sort"><span>Orden</span><select value={sort} onChange={(event) => setSort(event.target.value as SortKey)}><option value="newest">Más recientes</option><option value="oldest">Más antiguas</option><option value="name">Nombre A–Z</option></select></label>
-          {(query || date) && <button className="clear-service-filters" type="button" onClick={() => { setQuery(''); setDate(''); }}>Limpiar</button>}
+          {activeFilterCount > 0 && <button className="clear-service-filters" type="button" onClick={() => { setQuery(''); setDate(''); setSort('newest'); }}>Limpiar filtros</button>}
         </div>
       </div>
     </header>
@@ -152,8 +147,8 @@ export function MyServicesView({ token, categories, onChanged }: Props) {
       <div className="service-tabs" role="tablist">{tabs.map((item) => <button key={item.key} className={tab === item.key ? 'is-active' : ''} type="button" role="tab" aria-selected={tab === item.key} onClick={() => { setTab(item.key); setEditing(null); }}>{item.label}<span>{posts.filter((post) => item.statuses.includes(Number(post.is_active))).length}</span></button>)}</div>
 
       {loading ? <div className="modal-loading">Cargando publicaciones…</div> : visible.length ? <div className="my-services-grid">{visible.map((post) => <article className="post-card my-service-card" key={post.id_post}>
-        <div className="post-image">{post.image_url ? <img src={post.image_url} alt="" /> : <i className="bi bi-image" />}<span className={`service-status ${meta.className}`}>{meta.label}</span></div>
-        <div className="post-body"><span className="post-category">{post.category}</span><h3>{post.title}</h3><time>{post.created_at ? new Date(post.created_at).toLocaleDateString('es-AR') : 'Sin fecha'}</time>{tab === 'rejected' && post.rejection_reason && <p className="rejection-reason"><i className="bi bi-info-circle-fill" /> {post.rejection_reason}</p>}<div className="my-service-actions"><button type="button" onClick={() => setPreview(post)}><i className="bi bi-eye" /> Vista previa</button><button type="button" onClick={() => startEditing(post)}><i className="bi bi-pencil" /> Editar</button>{tab === 'approved' && <button type="button" onClick={() => changeStatus(post, 0)}>Desactivar</button>}{tab === 'inactive' && <><button className="positive-action" type="button" onClick={() => changeStatus(post, 1)}>Activar</button><button className="danger-action" type="button" onClick={() => setPostToRemove(post)}>Eliminar</button></>}</div></div>
+        <div className="post-image">{post.image_url ? <img src={post.image_url} alt="" /> : <i className="bi bi-image" />}</div>
+        <div className="post-body"><span className="post-category">{post.category}</span><h3>{post.title}</h3><time>{post.created_at ? new Date(post.created_at).toLocaleDateString('es-AR') : 'Sin fecha'}</time>{['edit_required', 'rejected', 'inactive'].includes(tab) && post.rejection_reason && <p className="rejection-reason"><i className="bi bi-info-circle-fill" /> {post.rejection_reason}</p>}<div className="my-service-actions"><button type="button" onClick={() => setPreview(post)}><i className="bi bi-eye" /> Vista previa</button><button type="button" onClick={() => startEditing(post)}><i className="bi bi-pencil" /> Editar</button>{tab === 'approved' && <button type="button" onClick={() => changeStatus(post, 0)}>Desactivar</button>}{tab === 'inactive' && <><button className="positive-action" type="button" onClick={() => changeStatus(post, 1)}>Activar</button><button className="danger-action" type="button" onClick={() => setPostToRemove(post)}>Eliminar</button></>}</div></div>
       </article>)}</div> : <div className="empty-state compact-empty"><i className="bi bi-inbox" /><h3>Sin resultados</h3><p>No hay servicios que coincidan con estos filtros.</p></div>}
     </div>
     {preview && <PostDetail post={{ ...preview, author: 'Vista previa' }} preview onClose={() => setPreview(null)} />}
