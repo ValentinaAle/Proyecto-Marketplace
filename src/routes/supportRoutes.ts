@@ -18,6 +18,7 @@ const router = Router();
 
 interface SubjectBody { subject?: string }
 interface MessageBody { message?: string }
+interface TicketStatusBody { status?: 'OPEN' | 'CLOSED'; reason?: string }
 
 const ensureTicketAccess = async (ticketId: string, userId: number): Promise<boolean> => {
   const [result] = await pool.execute(
@@ -34,8 +35,19 @@ const ensureTicketAccess = async (ticketId: string, userId: number): Promise<boo
 // GET /api/support/tickets — tickets del usuario
 router.get('/tickets', authMiddleware, async (req, res) => {
   try {
-    const [result] = await pool.execute('CALL sp_get_tickets(?)', [req.user.id_user]);
-    return res.status(200).json({ ok: true, data: procedureRows<RowDataPacket>(result) });
+    const [result] = await pool.execute(
+      `SELECT t.id_ticket, t.subject, t.status, t.created_at, t.closed_at, t.id_user,
+              SUM(CASE WHEN r.name = 'ADMIN' AND sm.message NOT LIKE '¡Hola! Gracias por elegir FIVOX.%' THEN 1 ELSE 0 END) AS admin_replies
+       FROM support_tickets t
+       LEFT JOIN support_messages sm ON sm.id_ticket = t.id_ticket
+       LEFT JOIN users_roles ur ON ur.id_user = sm.id_user
+       LEFT JOIN roles r ON r.id_role = ur.id_role
+       WHERE t.id_user = ?
+       GROUP BY t.id_ticket, t.subject, t.status, t.created_at, t.closed_at, t.id_user
+       ORDER BY COALESCE(MAX(sm.created_at), t.created_at) DESC`,
+      [req.user.id_user],
+    );
+    return res.status(200).json({ ok: true, data: selectRows<RowDataPacket>(result) });
   } catch (error) {
     console.error('Error en sp_get_tickets:', error);
     return res.status(500).json({ ok: false, message: 'Error al obtener tickets.' });
@@ -102,8 +114,20 @@ router.post<{ id: string }, unknown, MessageBody>('/tickets/:id/messages', authM
 // GET /api/support/admin/tickets — todos los tickets (admin)
 router.get('/admin/tickets', authMiddleware, requireAdmin, async (req, res) => {
   try {
-    const [result] = await pool.execute('CALL sp_get_all_tickets()');
-    return res.status(200).json({ ok: true, data: procedureRows<RowDataPacket>(result) });
+    const [result] = await pool.execute(
+      `SELECT t.id_ticket, t.subject, t.status, t.created_at, t.closed_at, t.id_user,
+              COALESCE(p.name, u.email) AS user_name,
+              SUM(CASE WHEN r.name = 'ADMIN' AND sm.message NOT LIKE '¡Hola! Gracias por elegir FIVOX.%' THEN 1 ELSE 0 END) AS admin_replies
+       FROM support_tickets t
+       INNER JOIN users u ON u.id_user = t.id_user
+       LEFT JOIN profiles p ON p.id_user = t.id_user
+       LEFT JOIN support_messages sm ON sm.id_ticket = t.id_ticket
+       LEFT JOIN users_roles ur ON ur.id_user = sm.id_user
+       LEFT JOIN roles r ON r.id_role = ur.id_role
+       GROUP BY t.id_ticket, t.subject, t.status, t.created_at, t.closed_at, t.id_user, p.name, u.email
+       ORDER BY COALESCE(MAX(sm.created_at), t.created_at) DESC`,
+    );
+    return res.status(200).json({ ok: true, data: selectRows<RowDataPacket>(result) });
   } catch (error) {
     console.error('Error en sp_get_all_tickets:', error);
     return res.status(500).json({ ok: false, message: 'Error al obtener tickets.' });
@@ -119,6 +143,39 @@ router.put<{ id: string }>('/tickets/:id/close', authMiddleware, requireAdmin, a
     console.error('Error en sp_close_ticket:', error);
     return res.status(500).json({ ok: false, message: 'Error al cerrar ticket.' });
   }
+});
+
+router.put<{ id: string }, unknown, TicketStatusBody>('/tickets/:id/status', authMiddleware, async (req, res) => {
+  const status = req.body.status;
+  const reason = req.body.reason?.trim();
+  if (!status || !['OPEN', 'CLOSED'].includes(status)) return res.status(400).json({ ok: false, message: 'Estado inválido.' });
+  if (!reason || reason.length < 5) return res.status(400).json({ ok: false, message: 'Explicá brevemente el motivo del cambio.' });
+  if (!await ensureTicketAccess(req.params.id, req.user.id_user)) return res.status(404).json({ ok: false, message: 'Consulta no encontrada.' });
+
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const [ticketResult] = await connection.execute('SELECT status FROM support_tickets WHERE id_ticket = ? FOR UPDATE', [req.params.id]);
+    const ticket = selectRows<RowDataPacket>(ticketResult)[0];
+    if (!ticket) { await connection.rollback(); return res.status(404).json({ ok: false, message: 'Consulta no encontrada.' }); }
+    if (ticket.status === status) { await connection.rollback(); return res.status(400).json({ ok: false, message: 'La consulta ya se encuentra en ese estado.' }); }
+
+    await connection.execute(
+      'UPDATE support_tickets SET status = ?, closed_at = CASE WHEN ? = \'CLOSED\' THEN NOW() ELSE NULL END, last_message_at = NOW() WHERE id_ticket = ?',
+      [status, status, req.params.id],
+    );
+    const action = status === 'CLOSED' ? 'Consulta cerrada' : 'Consulta reabierta';
+    await connection.execute(
+      'INSERT INTO support_messages (message, created_at, id_ticket, id_user) VALUES (?, NOW(), ?, ?)',
+      [`${action}: ${reason}`, req.params.id, req.user.id_user],
+    );
+    await connection.commit();
+    return res.status(200).json({ ok: true, message: status === 'CLOSED' ? 'Consulta cerrada.' : 'Consulta reabierta.' });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error al cambiar el estado del ticket:', error);
+    return res.status(500).json({ ok: false, message: 'No se pudo cambiar el estado de la consulta.' });
+  } finally { connection.release(); }
 });
 
 // PUT /api/support/tickets/:id/read
@@ -137,16 +194,7 @@ router.put<{ id: string }>('/tickets/:id/read', authMiddleware, async (req, res)
 
 // PUT /api/support/tickets/:id/read-admin
 router.put<{ id: string }>('/tickets/:id/read-admin', authMiddleware, requireAdmin, async (req, res) => {
-  try {
-    await pool.execute(
-      'UPDATE support_tickets SET last_read_admin_at = NOW() WHERE id_ticket = ?',
-      [req.params.id]
-    );
-    return res.status(200).json({ ok: true });
-  } catch (error) {
-    console.error('Error al marcar como leído admin:', error);
-    return res.status(500).json({ ok: false });
-  }
+  return res.status(200).json({ ok: true });
 });
 
 export default router;
