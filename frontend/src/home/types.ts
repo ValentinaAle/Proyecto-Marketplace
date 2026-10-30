@@ -15,7 +15,7 @@ export interface Post {
   author_avatar?: string;
   avg_rating?: number | string | null;
   total_reviews?: number;
-  is_active?: 0 | 1 | 2 | 3;
+  is_active?: 0 | 1 | 2 | 3 | 4;
   rejection_reason?: string | null;
   created_at?: string;
   id_category?: number;

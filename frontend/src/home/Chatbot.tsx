@@ -22,6 +22,8 @@ type Message = {
 type ChatbotProps = {
   searchRef: RefObject<HTMLInputElement | null>;
   onAction: (label: string) => void;
+  onLogout: () => void;
+  logoutArmed: boolean;
 };
 
 const intents: Intent[] = [
@@ -38,7 +40,7 @@ const intents: Intent[] = [
   { patterns: [/\b(reportar|denunciar|inapropiada|inadecuado)\b/], keywords: ['reportar publicación', 'contenido inadecuado'], answer: 'Para reportar una publicación, abrí Soporte y creá un ticket indicando el título del servicio y el motivo.', action: { label: 'Reportar en soporte', type: 'open-support' } },
   { patterns: [/\b(terminos|condiciones|politicas|reglas)\b/], keywords: ['términos y condiciones'], answer: 'Podés consultar las reglas de uso desde “Términos y Condiciones” en el menú lateral.', action: { label: 'Ver términos', type: 'open-terms' } },
   { patterns: [/\b(rol|roles|permisos|administrador|admin|tipo de usuario)\b/], keywords: ['qué puede hacer un usuario', 'qué hace un administrador'], answer: 'El rol de usuario permite buscar, publicar y contactar servicios, calificar y usar soporte. Los administradores gestionan usuarios, publicaciones, reportes, términos y tickets.' },
-  { patterns: [/\b(cerrar sesion|logout|salir|desconectar)\b/], keywords: ['cómo cierro sesión'], answer: 'Para cerrar sesión, usá el botón rojo “Cerrar sesión” del menú lateral.' },
+  { patterns: [/\b(cerrar sesion|logout|salir|desconectar)\b/], keywords: ['cómo cierro sesión'], answer: 'Para cerrar sesión, usá el botón de salida ubicado debajo del asistente.' },
   { patterns: [/\b(error|bug|falla|no funciona|problema tecnico)\b/], keywords: ['problema técnico'], answer: 'Si encontraste un error, abrí un ticket de soporte e indicá qué estabas haciendo, qué esperabas que ocurriera y qué ocurrió finalmente.', action: { label: 'Informar el problema', type: 'open-support' } },
   { patterns: [/^(hola|buen dia|buenas|hey|que tal)$/], keywords: [], answer: '¡Hola! Puedo ayudarte a buscar o publicar servicios, contactar prestadores, administrar tu perfil y usar soporte.' },
   { patterns: [/\b(gracias|muchas gracias|genial|perfecto)\b/], keywords: [], answer: '¡De nada! Si necesitás algo más sobre FIVOX, escribime.' },
@@ -57,15 +59,42 @@ function responseFor(value: string) {
   return match ? { text: match.answer, action: match.action } : fallback;
 }
 
-export function Chatbot({ searchRef, onAction }: ChatbotProps) {
+export function Chatbot({ searchRef, onAction, onLogout, logoutArmed }: ChatbotProps) {
   const [open, setOpen] = useState(false);
+  const [showNudge, setShowNudge] = useState(false);
+  const [nudgeDismissed, setNudgeDismissed] = useState(false);
   const [draft, setDraft] = useState('');
   const [showQuickReplies, setShowQuickReplies] = useState(true);
   const [messages, setMessages] = useState<Message[]>([{ id: 1, sender: 'bot', text: '¡Hola! Soy tu asistente FIVOX. ¿Cómo puedo ayudarte hoy?' }]);
   const nextId = useRef(2);
   const messagesEnd = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
 
   useEffect(() => { messagesEnd.current?.scrollIntoView({ block: 'end' }); }, [messages, open]);
+
+  useEffect(() => {
+    if (open || nudgeDismissed) return;
+    const timer = window.setTimeout(() => setShowNudge(true), 12000);
+    return () => window.clearTimeout(timer);
+  }, [open, nudgeDismissed]);
+
+  useEffect(() => {
+    if (!open) return;
+    function closeOnOutsideClick(event: globalThis.PointerEvent) {
+      const target = event.target;
+      if (!(target instanceof Node) || panelRef.current?.contains(target)) return;
+      if (target instanceof Element && target.closest('.chatbot-toggle')) return;
+      setOpen(false);
+    }
+    document.addEventListener('pointerdown', closeOnOutsideClick);
+    return () => document.removeEventListener('pointerdown', closeOnOutsideClick);
+  }, [open]);
+
+  function toggleChat() {
+    setShowNudge(false);
+    if (!open) setNudgeDismissed(true);
+    setOpen((current) => !current);
+  }
 
   function send(text: string) {
     const clean = text.trim();
@@ -101,8 +130,8 @@ export function Chatbot({ searchRef, onAction }: ChatbotProps) {
 
   return (
     <>
-      <section className={open ? 'chatbot-panel is-open' : 'chatbot-panel'} role="dialog" aria-modal="false" aria-label="Asistente FIVOX" aria-hidden={!open}>
-        <header className="chatbot-header"><span className="chatbot-avatar"><i className="bi bi-robot" aria-hidden="true" /></span><div><strong>Asistente FIVOX</strong><small>Ayuda rápida</small></div><button type="button" aria-label="Cerrar asistente" onClick={() => setOpen(false)}><i className="bi bi-x-lg" /></button></header>
+      <section ref={panelRef} className={open ? 'chatbot-panel is-open' : 'chatbot-panel'} role="dialog" aria-modal="false" aria-label="Asistente FIVOX" aria-hidden={!open}>
+        <header className="chatbot-header"><span className="chatbot-avatar"><i className="bi bi-robot" aria-hidden="true" /></span><div><strong>Asistente FIVOX</strong><small>Ayuda rápida</small></div></header>
         <div className="chatbot-messages" role="log" aria-live="polite">
           {messages.map((message) => <div className={`chatbot-message is-${message.sender}`} key={message.id}><p>{message.text}</p>{message.action && <button type="button" onClick={() => runAction(message.action!)}>{message.action.label}</button>}</div>)}
           <div ref={messagesEnd} />
@@ -110,7 +139,17 @@ export function Chatbot({ searchRef, onAction }: ChatbotProps) {
         {showQuickReplies && <div className="chatbot-quick-replies">{quickReplies.map((reply) => <button type="button" key={reply} onClick={() => send(reply)}>{reply}</button>)}</div>}
         <form className="chatbot-composer" onSubmit={submit}><input aria-label="Mensaje para el asistente" placeholder="Escribí tu mensaje…" value={draft} onChange={(event) => setDraft(event.target.value)} /><button type="submit" aria-label="Enviar mensaje" disabled={!draft.trim()}><i className="bi bi-send-fill" /></button></form>
       </section>
-      <button className="chatbot-toggle" type="button" aria-label={open ? 'Cerrar asistente' : 'Abrir asistente'} aria-expanded={open} onClick={() => setOpen((current) => !current)}><i className={open ? 'bi bi-x-lg' : 'bi bi-robot'} aria-hidden="true" /></button>
+      {!open && showNudge && <aside className="chatbot-nudge" aria-label="Invitación para usar la inteligencia artificial">
+        <button className="chatbot-nudge-close" type="button" aria-label="Cerrar mensaje" onClick={(event) => { event.stopPropagation(); setShowNudge(false); setNudgeDismissed(true); }}><i className="bi bi-x-lg" aria-hidden="true" /></button>
+        <strong>¿Necesitás ayuda?</strong>
+        <p>Preguntale a la IA de FIVOX. Puede ayudarte a buscar, publicar y gestionar tus servicios.</p>
+        <button className="chatbot-nudge-action" type="button" onClick={() => { setShowNudge(false); setNudgeDismissed(true); setOpen(true); }}>Escribime una consulta <i className="bi bi-arrow-right" aria-hidden="true" /></button>
+      </aside>}
+      <div className="chatbot-actions">
+        <button className="chatbot-toggle" type="button" aria-label={open ? 'Cerrar asistente' : 'Abrir asistente'} aria-expanded={open} onClick={toggleChat}><i className={open ? 'bi bi-x-lg' : 'bi bi-robot'} aria-hidden="true" /><span className="mobile-dock-label">Asistente</span></button>
+        <button className={logoutArmed ? 'chatbot-logout is-armed' : 'chatbot-logout'} type="button" aria-label={logoutArmed ? 'Confirmar cierre de sesión' : 'Cerrar sesión'} title={logoutArmed ? 'Tocá de nuevo para salir' : 'Cerrar sesión'} onClick={onLogout}><i className={logoutArmed ? 'bi bi-x-lg' : 'bi bi-box-arrow-right'} aria-hidden="true" /><span className="mobile-dock-label">Salir</span></button>
+        {logoutArmed && <span className="logout-confirm-hint" role="status">Tocá de nuevo para salir</span>}
+      </div>
     </>
   );
 }
