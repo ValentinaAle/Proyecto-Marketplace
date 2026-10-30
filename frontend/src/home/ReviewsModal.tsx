@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import { authorizedRequest } from '../api/client';
-import { ModalShell } from './ModalShell';
 
 export interface ServiceContact {
   id_contact: number;
@@ -13,17 +12,16 @@ export interface ServiceContact {
   author_name: string;
 }
 
-type ReviewsModalProps = {
+type ReviewsViewProps = {
   token: string;
   contacts: ServiceContact[];
-  onClose: () => void;
   onChanged: () => Promise<void>;
   onReviewPublished: () => Promise<void>;
 };
 
 const ratingLabels = ['', 'Muy malo', 'Malo', 'Regular', 'Bueno', 'Excelente'];
 
-export function ReviewsModal({ token, contacts, onClose, onChanged, onReviewPublished }: ReviewsModalProps) {
+export function ReviewsView({ token, contacts, onChanged, onReviewPublished }: ReviewsViewProps) {
   const [confirming, setConfirming] = useState<ServiceContact | null>(null);
   const [reviewing, setReviewing] = useState<ServiceContact | null>(null);
   const [rating, setRating] = useState(0);
@@ -73,9 +71,13 @@ export function ReviewsModal({ token, contacts, onClose, onChanged, onReviewPubl
     }
   }
 
-  return <ModalShell title="Calificar servicios" subtitle="Contanos cómo fue tu experiencia después de contactar al prestador." onClose={onClose} size="large" className="reviews-modal">
-    {error && <div className="review-error" role="alert"><i className="bi bi-exclamation-circle-fill" /> {error}</div>}
-    {sortedContacts.length === 0 ? <div className="review-empty"><i className="bi bi-star" /><h3>Todavía no hay servicios para revisar</h3><p>Cuando contactes a un prestador, el servicio aparecerá acá. A los 3 días te preguntaremos si finalmente lo contrataste.</p></div> : <div className="review-list">
+  return <section className="reviews-view" aria-labelledby="reviews-title">
+    <header className="workspace-heading my-services-heading reviews-heading">
+      <div className="reviews-heading-copy"><div><h1 id="reviews-title">Calificar servicios</h1><p>Contanos cómo fue tu experiencia después de contactar al prestador.</p></div></div>
+    </header>
+    <div className="reviews-content">
+      {error && <div className="review-error" role="alert"><i className="bi bi-exclamation-circle-fill" /> {error}</div>}
+      {sortedContacts.length === 0 ? <div className="review-empty"><i className="bi bi-star" /><h3>Todavía no hay servicios para revisar</h3><p>Cuando contactes a un prestador, el servicio aparecerá acá. A los 3 días te preguntaremos si finalmente lo contrataste.</p></div> : <div className="review-list">
       {sortedContacts.map((contact) => {
         const reviewed = Number(contact.already_reviewed) > 0;
         const daysRemaining = Math.max(0, 3 - Number(contact.days_since_contact));
@@ -103,6 +105,7 @@ export function ReviewsModal({ token, contacts, onClose, onChanged, onReviewPubl
           </div>}
         </article>;
       })}
-    </div>}
-  </ModalShell>;
+      </div>}
+    </div>
+  </section>;
 }
