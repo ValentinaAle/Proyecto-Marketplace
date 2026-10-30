@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { authorizedRequest } from '../api/client';
 import { Alert } from '../components/Alert';
-import { ModalShell } from './ModalShell';
 import type { Category, Post } from './types';
 
-type Props = { token: string; onClose: () => void; onChanged: () => Promise<void> };
+type Props = { token: string; onChanged: () => Promise<void> };
 type CategoryDecision = { mode: 'new' | 'existing'; name: string; id: string };
 
-export function ModerationModal({ token, onClose, onChanged }: Props) {
+export function ModerationView({ token, onChanged }: Props) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,7 +54,7 @@ export function ModerationModal({ token, onClose, onChanged }: Props) {
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'No se pudo moderar la publicación.'); }
   }
 
-  return <ModalShell title="Administrar Servicios" subtitle={`${posts.length} publicaciones pendientes de revisión.`} onClose={onClose} size="large">
+  return <section className="admin-workspace" aria-labelledby="moderation-title"><header className="workspace-heading my-services-heading"><div><h1 id="moderation-title">Administrar Servicios</h1><p>{posts.length} publicaciones pendientes de revisión.</p></div></header><div className="admin-workspace-content">
     {error && <Alert tone="danger">{error}</Alert>}
     {loading ? <div className="modal-loading">Cargando publicaciones…</div> : posts.length ? <div className="moderation-list">{posts.map((post) => <article className="moderation-row" key={post.id_post}>
       <div className="admin-post-thumb">{post.image_url ? <img src={post.image_url} alt="" /> : <i className="bi bi-image" />}</div>
@@ -76,5 +75,5 @@ export function ModerationModal({ token, onClose, onChanged }: Props) {
       <div className="inline-editor-actions"><button className="secondary-button" type="button" onClick={() => setReviewing(null)}>Cancelar</button><button className="primary-button modal-primary" type="button" onClick={() => void moderate(reviewing, 1)}>Aprobar publicación</button></div>
     </div>}
     {rejecting && <div className="inline-editor reject-editor"><label>Motivo del rechazo<textarea rows={3} value={reason} onChange={(event) => setReason(event.target.value)} /></label><button className="secondary-button" type="button" onClick={() => setRejecting(null)}>Cancelar</button><button className="danger-button" type="button" disabled={!reason.trim()} onClick={() => void moderate(rejecting, 3, reason.trim())}>Confirmar rechazo</button></div>}
-  </ModalShell>;
+  </div></section>;
 }
