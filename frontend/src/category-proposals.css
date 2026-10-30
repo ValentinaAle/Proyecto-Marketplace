@@ -19,3 +19,12 @@
 @media (max-width: 600px) {
   .category-review-options { grid-template-columns: 1fr; }
 }
+
+@media screen {
+  :root[data-theme='dark'] .proposed-category-badge { background: #382f19; color: #f0ce78; }
+  :root[data-theme='dark'] .category-review-heading > button:hover { background: #2a3733; }
+  :root[data-theme='dark'] .category-review-options label { background: var(--surface); }
+  :root[data-theme='dark'] .category-review-options label.is-selected { background: #203d37; }
+  :root[data-theme='dark'] .category-review-editor > label input,
+  :root[data-theme='dark'] .category-review-editor > label select { background: #202c28; color: var(--ink); }
+}

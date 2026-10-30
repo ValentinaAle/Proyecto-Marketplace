@@ -10,3 +10,9 @@
 .confirmation-actions button:disabled { cursor: wait; opacity: .65; }
 .confirmation-danger-button { border: 1px solid #922c33; background: #922c33; color: #fff; box-shadow: 0 7px 16px rgba(146,44,51,.2); }
 .confirmation-danger-button:hover:not(:disabled) { background: #762229; }
+
+@media screen {
+  :root[data-theme='dark'] .confirmation-dialog { border-color: rgba(255,255,255,.12); }
+  :root[data-theme='dark'] .confirmation-icon { background: #203d37; }
+  :root[data-theme='dark'] .confirmation-dialog--danger .confirmation-icon { background: #3a2226; color: #ffb8bd; }
+}
