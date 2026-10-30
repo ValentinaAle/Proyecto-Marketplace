@@ -13,6 +13,21 @@ export function CategoryScrollbar({ scrollerRef, itemCount }: Props) {
   const dragOffset = useRef(0);
   const [metrics, setMetrics] = useState<Metrics>({ left: 0, width: 0, maxScroll: 0 });
 
+  const getItemStep = useCallback(() => {
+    const scroller = scrollerRef.current;
+    const firstItem = scroller?.querySelector<HTMLElement>('.category-card');
+    if (!scroller || !firstItem) return 0;
+    const gap = Number.parseFloat(window.getComputedStyle(scroller).columnGap) || 0;
+    return firstItem.getBoundingClientRect().width + gap;
+  }, [scrollerRef]);
+
+  const snapToNearestItem = useCallback(() => {
+    const scroller = scrollerRef.current;
+    const step = getItemStep();
+    if (!scroller || !step) return;
+    scroller.scrollTo({ left: Math.round(scroller.scrollLeft / step) * step, behavior: 'smooth' });
+  }, [getItemStep, scrollerRef]);
+
   const update = useCallback(() => {
     const scroller = scrollerRef.current;
     const track = trackRef.current;
@@ -69,12 +84,13 @@ export function CategoryScrollbar({ scrollerRef, itemCount }: Props) {
   function handlePointerUp(event: PointerEvent<HTMLDivElement>) {
     dragging.current = false;
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    snapToNearestItem();
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     const scroller = scrollerRef.current;
     if (!scroller || !metrics.maxScroll) return;
-    const step = Math.max(180, scroller.clientWidth * .55);
+    const step = getItemStep() || Math.max(180, scroller.clientWidth * .25);
     if (event.key === 'ArrowRight') scroller.scrollBy({ left: step, behavior: 'smooth' });
     else if (event.key === 'ArrowLeft') scroller.scrollBy({ left: -step, behavior: 'smooth' });
     else if (event.key === 'Home') scroller.scrollTo({ left: 0, behavior: 'smooth' });
