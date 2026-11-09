@@ -5,6 +5,8 @@ type SidebarProps = {
   user: SessionUser;
   activeItem: string;
   reviewCount?: number;
+  adminUnreadCount?: number;
+  adminModerationCount?: number;
   onLegacyAction: (label: string) => void;
 };
 
@@ -14,13 +16,14 @@ const items: Item[] = [
   { label: 'Publicaciones', icon: 'bi-collection-fill' },
   { label: 'Mis Servicios', icon: 'bi-briefcase-fill', userOnly: true },
   { label: 'Calificar servicios', icon: 'bi-star-fill', userOnly: true },
-  { label: 'Soporte', icon: 'bi-chat-dots-fill' },
-  { label: 'Términos y Condiciones', icon: 'bi-file-earmark-text-fill' },
-  { label: 'Usuarios', icon: 'bi-people-fill', adminOnly: true },
+  { label: 'Soporte', icon: 'bi-chat-dots-fill', userOnly: true },
+  { label: 'Gestión de Soporte', icon: 'bi-chat-dots-fill', adminOnly: true },
   { label: 'Administrar Servicios', icon: 'bi-grid-fill', adminOnly: true },
+  { label: 'Administrar Usuarios', icon: 'bi-people-fill', adminOnly: true },
+  { label: 'Términos y Condiciones', icon: 'bi-file-earmark-text-fill' },
 ];
 
-export function Sidebar({ user, activeItem, reviewCount = 0, onLegacyAction }: SidebarProps) {
+export function Sidebar({ user, activeItem, reviewCount = 0, adminUnreadCount = 0, adminModerationCount = 0, onLegacyAction }: SidebarProps) {
   const isAdmin = user.role === 'ADMIN';
   const [menuOpen, setMenuOpen] = useState(false);
   const sidebarRef = useRef<HTMLElement>(null);
@@ -48,10 +51,12 @@ export function Sidebar({ user, activeItem, reviewCount = 0, onLegacyAction }: S
       <button className="home-menu-toggle" type="button" aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'} aria-expanded={menuOpen} aria-controls="home-navigation" onClick={() => setMenuOpen((current) => !current)}><i className={menuOpen ? 'bi bi-x-lg' : 'bi bi-list'} aria-hidden="true" /></button>
       <nav className={menuOpen ? 'home-nav is-open' : 'home-nav'} id="home-navigation">
         {visibleItems.map((item) => (
-          <button key={item.label} className={`${activeItem === item.label ? 'is-active ' : ''}${item.label === 'Publicaciones' ? 'is-mobile-docked' : ''}`.trim() || undefined} type="button" aria-current={activeItem === item.label ? 'page' : undefined} onClick={() => { onLegacyAction(item.label); setMenuOpen(false); }}>
+          <button key={item.label} className={`${activeItem === item.label ? 'is-active ' : ''}${item.label === 'Publicaciones' ? 'is-mobile-docked ' : ''}${item.label === 'Administrar Servicios' ? 'has-long-label' : ''}`.trim() || undefined} type="button" aria-current={activeItem === item.label ? 'page' : undefined} onClick={() => { onLegacyAction(item.label); setMenuOpen(false); }}>
             <i className={`bi ${item.icon}`} aria-hidden="true" />
             <span>{item.label}</span>
             {item.label === 'Calificar servicios' && reviewCount > 0 && <span className="nav-badge" aria-label={`${reviewCount} servicio${reviewCount === 1 ? '' : 's'} para calificar`}>{reviewCount}</span>}
+            {item.label === 'Gestión de Soporte' && adminUnreadCount > 0 && <span className="nav-badge" aria-label={`${adminUnreadCount} mensaje${adminUnreadCount === 1 ? '' : 's'} nuevo${adminUnreadCount === 1 ? '' : 's'}`}>{adminUnreadCount}</span>}
+            {item.label === 'Administrar Servicios' && adminModerationCount > 0 && <span className="nav-badge" aria-label={`${adminModerationCount} servicio${adminModerationCount === 1 ? '' : 's'} para revisar`}>{adminModerationCount}</span>}
           </button>
         ))}
       </nav>

@@ -24,10 +24,11 @@ export function CreatePostModal({ token, categories, onClose, onCreated }: Props
   }
 
   function update(name: keyof typeof fields, value: string) { setFields((current) => ({ ...current, [name]: value })); }
-  function validate() {
+  function validate(requireImage = false) {
     if (!fields.title.trim() || !fields.description.trim() || (!fields.id_category || (fields.id_category === 'new' && !fields.proposed_category.trim()))) return 'Título, descripción y categoría son obligatorios.';
     if (fields.title.trim().length < 25) return 'El título debe tener al menos 25 caracteres.';
     if (fields.description.trim().length < 90) return 'La descripción debe tener al menos 90 caracteres.';
+    if (requireImage && !fields.image_url.trim()) return 'La imagen es obligatoria para publicar el servicio.';
     return null;
   }
 
@@ -53,7 +54,7 @@ export function CreatePostModal({ token, categories, onClose, onCreated }: Props
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const validationError = validate();
+    const validationError = validate(true);
     if (validationError) { setError(validationError); return; }
     setLoading(true); setError(null);
     try {
@@ -76,7 +77,7 @@ export function CreatePostModal({ token, categories, onClose, onCreated }: Props
         {fields.id_category === 'new' && <label className="proposed-category-field">Nombre de la categoría propuesta <span className="field-count">{fields.proposed_category.length}/45</span><input maxLength={45} value={fields.proposed_category} onChange={(event) => update('proposed_category', event.target.value)} placeholder="Ej: Cuidado de mascotas" /><small>Un administrador podrá aprobarla, mejorar el nombre o asignar una categoría existente.</small></label>}
       </> : <>
         <div className="post-review-summary"><span>Revisá antes de publicar</span><strong>{fields.title}</strong><p>{fields.description}</p></div>
-        <label>Imagen <span className="optional-label">Opcional · máximo 5 MB</span><span className="image-upload-field"><span className="image-preview">{fields.image_url ? <img src={fields.image_url} alt="Vista previa de la publicación" /> : <i className="bi bi-image" />}</span><span className="image-upload-copy"><strong>{uploading ? 'Subiendo imagen…' : fields.image_url ? 'Imagen lista' : 'Elegí una imagen desde tu computadora'}</strong><small>JPG, PNG o WEBP</small><span className="file-button"><i className="bi bi-upload" />{fields.image_url ? 'Cambiar imagen' : 'Seleccionar imagen'}<input type="file" accept="image/jpeg,image/png,image/webp" disabled={uploading} onChange={selectImage} /></span></span></span></label>
+        <label>Imagen <span className="required-label">Obligatoria · máximo 5 MB</span><span className="image-upload-field"><span className="image-preview">{fields.image_url ? <img src={fields.image_url} alt="Vista previa de la publicación" /> : <i className="bi bi-image" />}</span><span className="image-upload-copy"><strong>{uploading ? 'Subiendo imagen…' : fields.image_url ? 'Imagen lista' : 'Elegí una imagen desde tu computadora'}</strong><small>JPG, PNG o WEBP</small><span className="file-button"><i className="bi bi-upload" />{fields.image_url ? 'Cambiar imagen' : 'Seleccionar imagen'}<input type="file" accept="image/jpeg,image/png,image/webp" aria-required="true" disabled={uploading} onChange={selectImage} /></span></span></span></label>
       </>}
     </form></>}
   </ModalShell>

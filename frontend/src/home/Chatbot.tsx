@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type RefObject } from 'react';
+import { authorizedRequest } from '../api/client';
 
 type ChatbotAction = {
   label: string;
@@ -20,6 +21,7 @@ type Message = {
 };
 
 type ChatbotProps = {
+  token: string;
   searchRef: RefObject<HTMLInputElement | null>;
   onAction: (label: string) => void;
   onLogout: () => void;
@@ -56,14 +58,15 @@ function normalize(value: string) {
 function responseFor(value: string) {
   const normalized = normalize(value);
   const match = intents.find((intent) => intent.patterns.some((pattern) => pattern.test(normalized)) || intent.keywords.some((keyword) => normalized.includes(normalize(keyword))));
-  return match ? { text: match.answer, action: match.action } : fallback;
+  return match ? { text: match.answer, action: match.action } : null;
 }
 
-export function Chatbot({ searchRef, onAction, onLogout, logoutArmed }: ChatbotProps) {
+export function Chatbot({ token, searchRef, onAction, onLogout, logoutArmed }: ChatbotProps) {
   const [open, setOpen] = useState(false);
   const [showNudge, setShowNudge] = useState(false);
   const [nudgeDismissed, setNudgeDismissed] = useState(false);
   const [draft, setDraft] = useState('');
+  const [waitingForAi, setWaitingForAi] = useState(false);
   const [showQuickReplies, setShowQuickReplies] = useState(true);
   const [messages, setMessages] = useState<Message[]>([{ id: 1, sender: 'bot', text: '¡Hola! Soy tu asistente FIVOX. ¿Cómo puedo ayudarte hoy?' }]);
   const nextId = useRef(2);
@@ -73,10 +76,26 @@ export function Chatbot({ searchRef, onAction, onLogout, logoutArmed }: ChatbotP
   useEffect(() => { messagesEnd.current?.scrollIntoView({ block: 'end' }); }, [messages, open]);
 
   useEffect(() => {
-    if (open || nudgeDismissed) return;
-    const timer = window.setTimeout(() => setShowNudge(true), 12000);
-    return () => window.clearTimeout(timer);
-  }, [open, nudgeDismissed]);
+    if (open || nudgeDismissed || showNudge) return;
+    let timer: number | undefined;
+    const scheduleNudge = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => setShowNudge(true), 12000);
+    };
+    const registerActivity = () => {
+      if (document.hidden) { window.clearTimeout(timer); return; }
+      scheduleNudge();
+    };
+    const activityEvents: Array<keyof WindowEventMap> = ['pointermove', 'pointerdown', 'keydown', 'scroll', 'wheel', 'touchstart'];
+    activityEvents.forEach((eventName) => window.addEventListener(eventName, registerActivity, { passive: true, capture: eventName === 'scroll' }));
+    document.addEventListener('visibilitychange', registerActivity);
+    scheduleNudge();
+    return () => {
+      window.clearTimeout(timer);
+      activityEvents.forEach((eventName) => window.removeEventListener(eventName, registerActivity, { capture: eventName === 'scroll' }));
+      document.removeEventListener('visibilitychange', registerActivity);
+    };
+  }, [open, nudgeDismissed, showNudge]);
 
   useEffect(() => {
     if (!open) return;
@@ -96,18 +115,35 @@ export function Chatbot({ searchRef, onAction, onLogout, logoutArmed }: ChatbotP
     setOpen((current) => !current);
   }
 
-  function send(text: string) {
+  async function send(text: string) {
     const clean = text.trim();
-    if (!clean) return;
+    if (!clean || waitingForAi) return;
     const response = responseFor(clean);
-    setMessages((current) => [...current, { id: nextId.current++, sender: 'user', text: clean }, { id: nextId.current++, sender: 'bot', ...response }]);
+    setMessages((current) => [...current, { id: nextId.current++, sender: 'user', text: clean }]);
     setShowQuickReplies(false);
     setDraft('');
+    if (response) {
+      setMessages((current) => [...current, { id: nextId.current++, sender: 'bot', ...response }]);
+      return;
+    }
+
+    setWaitingForAi(true);
+    try {
+      const result = await authorizedRequest<{ answer: string; source: 'ai' }>('/chatbot/ask', token, {
+        method: 'POST',
+        body: JSON.stringify({ message: clean }),
+      });
+      setMessages((current) => [...current, { id: nextId.current++, sender: 'bot', text: result.data.answer }]);
+    } catch {
+      setMessages((current) => [...current, { id: nextId.current++, sender: 'bot', ...fallback }]);
+    } finally {
+      setWaitingForAi(false);
+    }
   }
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    send(draft);
+    void send(draft);
   }
 
   function runAction(action: ChatbotAction) {
@@ -132,12 +168,13 @@ export function Chatbot({ searchRef, onAction, onLogout, logoutArmed }: ChatbotP
     <>
       <section ref={panelRef} className={open ? 'chatbot-panel is-open' : 'chatbot-panel'} role="dialog" aria-modal="false" aria-label="Asistente FIVOX" aria-hidden={!open}>
         <header className="chatbot-header"><span className="chatbot-avatar"><i className="bi bi-robot" aria-hidden="true" /></span><div><strong>Asistente FIVOX</strong><small>Ayuda rápida</small></div></header>
-        <div className="chatbot-messages" role="log" aria-live="polite">
+        <div className="chatbot-messages" role="log" aria-live="polite" aria-busy={waitingForAi}>
           {messages.map((message) => <div className={`chatbot-message is-${message.sender}`} key={message.id}><p>{message.text}</p>{message.action && <button type="button" onClick={() => runAction(message.action!)}>{message.action.label}</button>}</div>)}
+          {waitingForAi && <div className="chatbot-message is-bot is-thinking" role="status"><span>Consultando a la IA</span><i aria-hidden="true" /><i aria-hidden="true" /><i aria-hidden="true" /></div>}
           <div ref={messagesEnd} />
         </div>
-        {showQuickReplies && <div className="chatbot-quick-replies">{quickReplies.map((reply) => <button type="button" key={reply} onClick={() => send(reply)}>{reply}</button>)}</div>}
-        <form className="chatbot-composer" onSubmit={submit}><input aria-label="Mensaje para el asistente" placeholder="Escribí tu mensaje…" value={draft} onChange={(event) => setDraft(event.target.value)} /><button type="submit" aria-label="Enviar mensaje" disabled={!draft.trim()}><i className="bi bi-send-fill" /></button></form>
+        {showQuickReplies && <div className="chatbot-quick-replies">{quickReplies.map((reply) => <button type="button" key={reply} onClick={() => { void send(reply); }}>{reply}</button>)}</div>}
+        <form className="chatbot-composer" onSubmit={submit}><input aria-label="Mensaje para el asistente" placeholder={waitingForAi ? 'Esperando respuesta…' : 'Escribí tu mensaje…'} value={draft} disabled={waitingForAi} onChange={(event) => setDraft(event.target.value)} /><button type="submit" aria-label="Enviar mensaje" disabled={waitingForAi || !draft.trim()}><i className="bi bi-send-fill" /></button></form>
       </section>
       {!open && showNudge && <aside className="chatbot-nudge" aria-label="Invitación para usar la inteligencia artificial">
         <button className="chatbot-nudge-close" type="button" aria-label="Cerrar mensaje" onClick={(event) => { event.stopPropagation(); setShowNudge(false); setNudgeDismissed(true); }}><i className="bi bi-x-lg" aria-hidden="true" /></button>

@@ -19,7 +19,11 @@ import { ReviewsView, type ServiceContact } from '../home/ReviewsModal';
 import { Sidebar } from '../home/Sidebar';
 import { SupportView } from '../home/SupportModal';
 import { TermsModal, TermsView } from '../home/TermsModal';
+import { UserProfileModal } from '../home/UserProfileModal';
 import type { Category, Post, Profile } from '../home/types';
+
+type HomeView = 'publications' | 'services' | 'reviews' | 'support' | 'users' | 'moderation' | 'terms' | 'reports';
+type AdminTicketSummary = { admin_unread_count?: number };
 
 export function HomePage() {
   const navigate = useNavigate();
@@ -30,6 +34,7 @@ export function HomePage() {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<string | null>(null);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [adminPostAction, setAdminPostAction] = useState<{ kind: 'disable' | 'suggest-edit'; post: Post } | null>(null);
   const [adminActionReason, setAdminActionReason] = useState('');
   const [adminActionBusy, setAdminActionBusy] = useState(false);
@@ -37,8 +42,16 @@ export function HomePage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const [contacts, setContacts] = useState<ServiceContact[]>([]);
-  const [reviewSuggestionDismissed, setReviewSuggestionDismissed] = useState(false);
-  const [activeView, setActiveView] = useState<'publications' | 'services' | 'reviews' | 'support' | 'users' | 'moderation' | 'terms' | 'reports'>('publications');
+  const [adminUnreadCount, setAdminUnreadCount] = useState(0);
+  const [adminModerationCount, setAdminModerationCount] = useState(0);
+  const [activeView, setActiveView] = useState<HomeView>(() => {
+    const sessionKey = `fivox_active_view_${user?.id_user ?? user?.id ?? 'anonymous'}`;
+    const stored = sessionStorage.getItem(sessionKey) as HomeView | null;
+    const allowed: HomeView[] = user?.role === 'ADMIN'
+      ? ['publications', 'support', 'users', 'moderation', 'terms', 'reports']
+      : ['publications', 'services', 'reviews', 'support'];
+    return stored && allowed.includes(stored) ? stored : 'publications';
+  });
   const [activeModal, setActiveModal] = useState<'profile' | 'create' | 'terms' | null>(null);
   const [profileRequiredForPost, setProfileRequiredForPost] = useState(false);
   const [logoutArmed, setLogoutArmed] = useState(false);
@@ -53,14 +66,19 @@ export function HomePage() {
     return () => window.clearTimeout(timer);
   }, [logoutArmed]);
 
+  useEffect(() => {
+    if (!user) return;
+    sessionStorage.setItem(`fivox_active_view_${user.id_user ?? user.id ?? 'anonymous'}`, activeView);
+  }, [activeView, user]);
+
   const activeSidebarItem = activeModal === 'profile' ? 'Mi perfil'
     : activeModal === 'create' ? 'Crear publicación'
     : activeModal === 'terms' ? 'Términos y Condiciones'
-    : activeView === 'users' ? 'Usuarios'
+    : activeView === 'users' ? 'Administrar Usuarios'
     : activeView === 'moderation' ? 'Administrar Servicios'
         : activeView === 'terms' ? 'Términos y Condiciones'
           : activeView === 'reports' ? 'Reportes'
-          : activeView === 'support' ? 'Soporte'
+          : activeView === 'support' ? user?.role === 'ADMIN' ? 'Gestión de Soporte' : 'Soporte'
             : activeView === 'reviews' ? 'Calificar servicios'
             : activeView === 'services' ? 'Mis Servicios'
             : 'Publicaciones';
@@ -71,7 +89,7 @@ export function HomePage() {
   }
 
   async function openCreatePost() {
-    if (!token) return;
+    if (!token || user?.is_active === false) return;
     try {
       const response = await authorizedRequest<Profile>('/auth/me', token);
       const profile = response.data;
@@ -88,23 +106,33 @@ export function HomePage() {
   }
 
   const refreshPosts = useCallback(async () => {
-    if (!token) return;
+    if (!token || user?.is_active === false) return;
     const [postResponse, categoryResponse] = await Promise.all([
       authorizedRequest<Post[]>('/posts', token),
       authorizedRequest<Category[]>('/posts/categories', token),
     ]);
     setPosts(postResponse.data);
     setCategories(categoryResponse.data);
-  }, [token]);
+  }, [token, user?.is_active]);
 
   const refreshContacts = useCallback(async () => {
-    if (!token || user?.role === 'ADMIN') return;
+    if (!token || user?.role === 'ADMIN' || user?.is_active === false) return;
     const response = await authorizedRequest<ServiceContact[]>('/reviews/my-contacts', token);
     setContacts(response.data);
-  }, [token, user?.role]);
+  }, [token, user?.role, user?.is_active]);
+
+  const refreshAdminCounts = useCallback(async () => {
+    if (!token || user?.role !== 'ADMIN' || user?.is_active === false) return;
+    const [ticketResult, pendingResult] = await Promise.allSettled([
+      authorizedRequest<AdminTicketSummary[]>('/support/admin/tickets', token),
+      authorizedRequest<Post[]>('/posts/pending', token),
+    ]);
+    if (ticketResult.status === 'fulfilled') setAdminUnreadCount(ticketResult.value.data.reduce((total, ticket) => total + Number(ticket.admin_unread_count || 0), 0));
+    if (pendingResult.status === 'fulfilled') setAdminModerationCount(pendingResult.value.data.length);
+  }, [token, user?.role, user?.is_active]);
 
   useEffect(() => {
-    if (!token) return;
+    if (!token || user?.is_active === false) { setLoading(false); return; }
     Promise.all([
       authorizedRequest<Post[]>('/posts', token),
       authorizedRequest<Category[]>('/posts/categories', token),
@@ -114,20 +142,35 @@ export function HomePage() {
     }).catch((error: unknown) => {
       setMessage(error instanceof Error ? error.message : 'No se pudo cargar el home.');
     }).finally(() => setLoading(false));
-  }, [token]);
+  }, [token, user?.is_active]);
 
   useEffect(() => { void refreshContacts().catch(() => undefined); }, [refreshContacts]);
+  useEffect(() => {
+    if (user?.role !== 'ADMIN') return;
+    void refreshAdminCounts().catch(() => undefined);
+    const interval = window.setInterval(() => { void refreshAdminCounts().catch(() => undefined); }, 8000);
+    return () => window.clearInterval(interval);
+  }, [refreshAdminCounts, user?.role]);
 
   const pendingReviews = useMemo(() => contacts.filter((contact) => Number(contact.days_since_contact) >= 3 && !Number(contact.already_reviewed)), [contacts]);
 
   const visiblePosts = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase('es');
-    return posts.filter((post) => (!category || post.category === category) && (!normalized || `${post.title} ${post.description} ${post.author}`.toLocaleLowerCase('es').includes(normalized)));
+    const matches = posts.filter((post) => (!category || post.category === category) && (!normalized || `${post.title} ${post.description} ${post.author}`.toLocaleLowerCase('es').includes(normalized)));
+    if (!normalized) return matches;
+    return [...matches].sort((left, right) => {
+      const ratingDifference = Number(right.avg_rating || 0) - Number(left.avg_rating || 0);
+      if (ratingDifference !== 0) return ratingDifference;
+      return Number(right.total_reviews || 0) - Number(left.total_reviews || 0);
+    });
   }, [posts, query, category]);
 
   if (!token || !user) return <Navigate to="/login" replace />;
 
+  if (user.is_active === false) return <main className="disabled-account-page"><section><span className="disabled-account-icon"><i className="bi bi-lock-fill" /></span><p className="disabled-account-kicker">Cuenta deshabilitada</p><h1>No podés acceder a Fivox por el momento</h1><p className="disabled-account-reason">{user.disabled_reason || 'La administración deshabilitó tu cuenta. Contactá a soporte si necesitás más información.'}</p><button className="secondary-button" type="button" onClick={() => { clearSession(); navigate('/login', { replace: true }); }}><i className="bi bi-box-arrow-left" /> Cerrar sesión</button></section></main>;
+
   function logout() {
+    sessionStorage.removeItem(`fivox_active_view_${user?.id_user ?? user?.id ?? 'anonymous'}`);
     clearSession();
     navigate('/login', { replace: true });
   }
@@ -142,9 +185,9 @@ export function HomePage() {
     if (label === 'Mi perfil') { setProfileRequiredForPost(false); setActiveModal('profile'); return; }
     if (label === 'Crear publicación') { void openCreatePost(); return; }
     if (label === 'Mis Servicios') { setActiveModal(null); setActiveView('services'); homeMain.current?.scrollTo({ top: 0, behavior: 'smooth' }); return; }
-    if (label === 'Calificar servicios') { void refreshContacts().catch(() => undefined); setActiveModal(null); setActiveView('reviews'); setReviewSuggestionDismissed(true); homeMain.current?.scrollTo({ top: 0, behavior: 'smooth' }); return; }
-    if (label === 'Soporte' || label === 'Consultas') { setActiveModal(null); setActiveView('support'); homeMain.current?.scrollTo({ top: 0, behavior: 'smooth' }); return; }
-    if (label === 'Usuarios') { setActiveModal(null); setActiveView('users'); homeMain.current?.scrollTo({ top: 0 }); return; }
+    if (label === 'Calificar servicios') { void refreshContacts().catch(() => undefined); setActiveModal(null); setActiveView('reviews'); homeMain.current?.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+    if (label === 'Soporte' || label === 'Gestión de Soporte' || label === 'Consultas') { setActiveModal(null); setActiveView('support'); homeMain.current?.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+    if (label === 'Usuarios' || label === 'Administrar Usuarios') { setActiveModal(null); setActiveView('users'); homeMain.current?.scrollTo({ top: 0 }); return; }
     if (label === 'Administrar Servicios') { setActiveModal(null); setActiveView('moderation'); homeMain.current?.scrollTo({ top: 0 }); return; }
     if (label === 'Términos y Condiciones') {
       if (user?.role === 'ADMIN') { setActiveModal(null); setActiveView('terms'); homeMain.current?.scrollTo({ top: 0 }); }
@@ -208,10 +251,9 @@ export function HomePage() {
 
   return (
     <div className="home-frame">
-      <Sidebar user={user} activeItem={activeSidebarItem} reviewCount={pendingReviews.length} onLegacyAction={legacyNotice} />
-      <main className="home-main" ref={homeMain}>
+      <Sidebar user={user} activeItem={activeSidebarItem} reviewCount={pendingReviews.length} adminUnreadCount={adminUnreadCount} adminModerationCount={adminModerationCount} onLegacyAction={legacyNotice} />
+      <main className="home-main" ref={homeMain} tabIndex={0} aria-label="Contenido principal">
         <div className="home-content">
-          {pendingReviews.length > 0 && !reviewSuggestionDismissed && activeView === 'publications' && <aside className="review-suggestion" aria-label="Servicio pendiente de confirmación"><i className="bi bi-star-fill" /><div><strong>¿Finalmente contrataste {pendingReviews.length === 1 ? `“${pendingReviews[0].post_title}”` : 'alguno de estos servicios'}?</strong><span>Confirmalo para poder calificar tu experiencia.</span></div><button className="primary-button" type="button" onClick={() => { setActiveView('reviews'); setReviewSuggestionDismissed(true); homeMain.current?.scrollTo({ top: 0, behavior: 'smooth' }); }}>Revisar ahora</button><button className="review-suggestion-close" type="button" aria-label="Cerrar sugerencia" onClick={() => setReviewSuggestionDismissed(true)}><i className="bi bi-x-lg" /></button></aside>}
           {activeView === 'publications' ? <>
           <section className="home-hero">
             <h1>¿Qué servicio necesitás?</h1>
@@ -225,7 +267,6 @@ export function HomePage() {
 
           <section className="category-section" aria-label="Filtros por categoría">
             <CategoryScrollbar scrollerRef={categoryStrip} itemCount={categories.length} />
-            {category && <div className="category-selection"><button type="button" onClick={() => setCategory(null)}>Ver todas</button></div>}
             <div className="category-strip" id="category-strip" ref={categoryStrip}>
               {categories.map((item) => {
                 const meta = getCategoryMeta(item.name);
@@ -237,16 +278,17 @@ export function HomePage() {
 
           <section className="posts-section" ref={postsSection} aria-label="Publicaciones">
             {message && <div className="home-message" role="status">{message}<button type="button" aria-label="Cerrar mensaje" onClick={() => setMessage(null)}><i className="bi bi-x" /></button></div>}
-            {loading ? <div className="post-grid">{Array.from({ length: 8 }, (_, index) => <div className="post-skeleton" key={index} />)}</div> : visiblePosts.length ? <div className="post-grid">{visiblePosts.map((post, index) => <PostCard key={post.id_post} post={post} revealOrder={index % 4} onOpen={setSelectedPost} adminActions={user.role === 'ADMIN' ? { onSuggestEdit: (selected) => openAdminPostAction('suggest-edit', selected), onDisable: (selected) => openAdminPostAction('disable', selected) } : undefined} />)}</div> : <div className="empty-state"><i className="bi bi-search" /><h3>No encontramos publicaciones</h3><p>Probá con otra búsqueda o eliminá el filtro seleccionado.</p></div>}
+            {loading ? <div className="post-grid">{Array.from({ length: 8 }, (_, index) => <div className="post-skeleton" key={index} />)}</div> : visiblePosts.length ? <div className="post-grid">{visiblePosts.map((post, index) => <PostCard key={post.id_post} post={post} revealOrder={index % 4} onOpen={setSelectedPost} onAuthorOpen={setSelectedUserId} adminActions={user.role === 'ADMIN' ? { onSuggestEdit: (selected) => openAdminPostAction('suggest-edit', selected), onDisable: (selected) => openAdminPostAction('disable', selected) } : undefined} />)}</div> : <div className="empty-state"><i className="bi bi-search" /><h3>No encontramos publicaciones</h3><p>Probá con otra búsqueda o eliminá el filtro seleccionado.</p></div>}
           </section>
-          </> : activeView === 'services' ? <MyServicesView token={token} categories={categories} onChanged={refreshPosts} /> : activeView === 'reviews' ? <ReviewsView token={token} contacts={contacts} onChanged={refreshContacts} onReviewPublished={refreshPosts} /> : activeView === 'support' ? <SupportView token={token} user={user} /> : activeView === 'users' ? <AdminUsersView token={token} /> : activeView === 'moderation' ? <ModerationView token={token} onChanged={refreshPosts} /> : activeView === 'reports' ? <ReportsView token={token} posts={posts} /> : <TermsView token={token} user={user} />}
+          </> : activeView === 'services' ? <MyServicesView token={token} categories={categories} onChanged={refreshPosts} /> : activeView === 'reviews' ? <ReviewsView token={token} contacts={contacts} onChanged={refreshContacts} onReviewPublished={refreshPosts} /> : activeView === 'support' ? <SupportView token={token} user={user} onUnreadChanged={() => { void refreshAdminCounts().catch(() => undefined); }} /> : activeView === 'users' ? <AdminUsersView token={token} currentUserId={user.id_user ?? user.id} onViewUser={setSelectedUserId} /> : activeView === 'moderation' ? <ModerationView token={token} onChanged={async () => { await Promise.all([refreshPosts(), refreshAdminCounts()]); }} onViewUser={setSelectedUserId} /> : activeView === 'reports' ? <ReportsView token={token} posts={posts} /> : <TermsView token={token} user={user} />}
         </div>
       </main>
       <div className="mobile-floating-dock" role="navigation" aria-label="Acciones rápidas">
         <FloatingActions isAdmin={user.role === 'ADMIN'} activeAction={activeSidebarItem} onAction={legacyNotice} onLogout={user.role === 'ADMIN' ? requestLogout : undefined} logoutArmed={logoutArmed} />
-        {user.role !== 'ADMIN' && <Chatbot searchRef={searchInput} onAction={legacyNotice} onLogout={requestLogout} logoutArmed={logoutArmed} />}
+        {user.role !== 'ADMIN' && token && <Chatbot token={token} searchRef={searchInput} onAction={legacyNotice} onLogout={requestLogout} logoutArmed={logoutArmed} />}
       </div>
-      {selectedPost && <PostDetail post={selectedPost} token={token} canContact={user.role !== 'ADMIN'} onContactRegistered={() => { void refreshContacts().catch(() => undefined); }} onCategorySelect={filterFromDetail} onClose={() => setSelectedPost(null)} />}
+      {selectedPost && <PostDetail post={selectedPost} token={token} canContact={user.role !== 'ADMIN'} onContactRegistered={() => { void refreshContacts().catch(() => undefined); }} onCategorySelect={filterFromDetail} onAuthorOpen={setSelectedUserId} onClose={() => setSelectedPost(null)} />}
+      {selectedUserId && <UserProfileModal userId={selectedUserId} token={token} isAdmin={user.role === 'ADMIN'} onClose={() => setSelectedUserId(null)} />}
       {activeModal === 'profile' && <ProfileModal token={token} notice={profileRequiredForPost ? 'Completá tu nombre, email y teléfono antes de crear una publicación.' : undefined} onClose={() => { setActiveModal(null); setProfileRequiredForPost(false); }} onSaved={handleProfileSaved} />}
       {activeModal === 'create' && <CreatePostModal token={token} categories={categories} onClose={() => setActiveModal(null)} onCreated={handleCreated} />}
       {activeModal === 'terms' && <TermsModal token={token} onClose={() => setActiveModal(null)} />}
