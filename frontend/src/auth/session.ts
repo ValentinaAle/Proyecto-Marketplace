@@ -4,6 +4,8 @@ export interface SessionUser {
   name: string;
   email: string;
   role: 'ADMIN' | 'USER' | string;
+  is_active?: boolean;
+  disabled_reason?: string | null;
 }
 
 export interface AuthData {

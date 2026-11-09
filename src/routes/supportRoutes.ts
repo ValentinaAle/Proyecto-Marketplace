@@ -37,7 +37,16 @@ router.get('/tickets', authMiddleware, async (req, res) => {
   try {
     const [result] = await pool.execute(
       `SELECT t.id_ticket, t.subject, t.status, t.created_at, t.closed_at, t.id_user,
-              SUM(CASE WHEN r.name = 'ADMIN' AND sm.message NOT LIKE '¡Hola! Gracias por elegir FIVOX.%' THEN 1 ELSE 0 END) AS admin_replies
+              SUM(CASE WHEN r.name = 'ADMIN' AND sm.message NOT LIKE '¡Hola! Gracias por elegir FIVOX.%' THEN 1 ELSE 0 END) AS admin_replies,
+              EXISTS(
+                SELECT 1 FROM users_roles latest_role
+                INNER JOIN roles latest_role_name ON latest_role_name.id_role = latest_role.id_role
+                WHERE latest_role.id_user = (
+                  SELECT latest_message.id_user FROM support_messages latest_message
+                  WHERE latest_message.id_ticket = t.id_ticket
+                  ORDER BY latest_message.created_at DESC, latest_message.id_message DESC LIMIT 1
+                ) AND latest_role_name.name = 'ADMIN'
+              ) AS last_message_from_admin
        FROM support_tickets t
        LEFT JOIN support_messages sm ON sm.id_ticket = t.id_ticket
        LEFT JOIN users_roles ur ON ur.id_user = sm.id_user
@@ -117,15 +126,35 @@ router.get('/admin/tickets', authMiddleware, requireAdmin, async (req, res) => {
     const [result] = await pool.execute(
       `SELECT t.id_ticket, t.subject, t.status, t.created_at, t.closed_at, t.id_user,
               COALESCE(p.name, u.email) AS user_name,
-              SUM(CASE WHEN r.name = 'ADMIN' AND sm.message NOT LIKE '¡Hola! Gracias por elegir FIVOX.%' THEN 1 ELSE 0 END) AS admin_replies
+              (SELECT COUNT(*)
+               FROM support_messages reply
+               INNER JOIN users_roles reply_role ON reply_role.id_user = reply.id_user
+               INNER JOIN roles reply_role_name ON reply_role_name.id_role = reply_role.id_role
+               WHERE reply.id_ticket = t.id_ticket
+                 AND reply_role_name.name = 'ADMIN'
+                 AND reply.message NOT LIKE '¡Hola! Gracias por elegir FIVOX.%') AS admin_replies,
+              EXISTS(
+                SELECT 1 FROM users_roles latest_role
+                INNER JOIN roles latest_role_name ON latest_role_name.id_role = latest_role.id_role
+                WHERE latest_role.id_user = (
+                  SELECT latest_message.id_user FROM support_messages latest_message
+                  WHERE latest_message.id_ticket = t.id_ticket
+                  ORDER BY latest_message.created_at DESC, latest_message.id_message DESC LIMIT 1
+                ) AND latest_role_name.name = 'ADMIN'
+              ) AS last_message_from_admin,
+              (SELECT COUNT(*)
+               FROM support_messages unread
+               WHERE unread.id_ticket = t.id_ticket
+                 AND (t.last_read_admin_at IS NULL OR unread.created_at > t.last_read_admin_at)
+                 AND NOT EXISTS (
+                   SELECT 1 FROM users_roles unread_role
+                   INNER JOIN roles unread_role_name ON unread_role_name.id_role = unread_role.id_role
+                   WHERE unread_role.id_user = unread.id_user AND unread_role_name.name = 'ADMIN'
+                 )) AS admin_unread_count
        FROM support_tickets t
        INNER JOIN users u ON u.id_user = t.id_user
        LEFT JOIN profiles p ON p.id_user = t.id_user
-       LEFT JOIN support_messages sm ON sm.id_ticket = t.id_ticket
-       LEFT JOIN users_roles ur ON ur.id_user = sm.id_user
-       LEFT JOIN roles r ON r.id_role = ur.id_role
-       GROUP BY t.id_ticket, t.subject, t.status, t.created_at, t.closed_at, t.id_user, p.name, u.email
-       ORDER BY COALESCE(MAX(sm.created_at), t.created_at) DESC`,
+       ORDER BY COALESCE((SELECT MAX(activity.created_at) FROM support_messages activity WHERE activity.id_ticket = t.id_ticket), t.created_at) DESC`,
     );
     return res.status(200).json({ ok: true, data: selectRows<RowDataPacket>(result) });
   } catch (error) {
@@ -194,7 +223,13 @@ router.put<{ id: string }>('/tickets/:id/read', authMiddleware, async (req, res)
 
 // PUT /api/support/tickets/:id/read-admin
 router.put<{ id: string }>('/tickets/:id/read-admin', authMiddleware, requireAdmin, async (req, res) => {
-  return res.status(200).json({ ok: true });
+  try {
+    await pool.execute('UPDATE support_tickets SET last_read_admin_at = NOW() WHERE id_ticket = ?', [req.params.id]);
+    return res.status(200).json({ ok: true });
+  } catch (error) {
+    console.error('Error al marcar la consulta como leída por administración:', error);
+    return res.status(500).json({ ok: false });
+  }
 });
 
 export default router;

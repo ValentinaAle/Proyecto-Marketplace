@@ -8,13 +8,16 @@
     "typecheck": "tsc --noEmit",
     "start": "node dist/index.js",
     "dev": "tsx watch index.ts",
-    "test": "node --import tsx --test $(find tests -type f -name '*.test.ts')",
+    "test": "node --import tsx --test tests/**/*.test.ts",
     "frontend:dev": "npm --prefix frontend run dev",
     "frontend:build": "npm --prefix frontend run build",
     "frontend:typecheck": "npm --prefix frontend run typecheck",
     "package:ci": "node scripts/package-ci.js",
     "seed:demo": "node scripts/seed-demo.js",
-    "seed:my-services": "node scripts/seed-my-services-demo.js"
+    "seed:my-services": "node scripts/seed-my-services-demo.js",
+    "seed:reset-users": "node scripts/reset-demo-data.js --apply",
+    "seed:many-posts": "node scripts/seed-many-posts.js",
+    "seed:rating-contacts": "node scripts/seed-rating-contacts.js"
   },
   "keywords": [],
   "author": "",

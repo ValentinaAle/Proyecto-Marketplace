@@ -25,6 +25,15 @@ const demoPosts = [
   { owner: 0, category: 'Diseño', title: 'Diseño de piezas digitales', description: 'Contenido visual para redes, campañas, presentaciones y lanzamientos.', image: 'https://images.unsplash.com/photo-1545235617-9465d2a55698?auto=format&fit=crop&w=1200&q=82' },
   { owner: 3, category: 'Fotografía', title: 'Fotografía de eventos', description: 'Cobertura profesional de celebraciones, eventos corporativos y encuentros.', image: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1200&q=82' },
   { owner: 1, category: 'Fotografía', title: 'Fotos de producto', description: 'Producción de imágenes para catálogos, tiendas online y redes sociales.', image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=1200&q=82' },
+  { owner: 1, category: 'Técnicos', status: 2, title: 'Instalación de griferías modernas', description: 'Renovación de griferías de cocina y baño con revisión de conexiones y pérdidas.', image: 'https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?auto=format&fit=crop&w=1200&q=82' },
+  { owner: 1, category: 'Freelancers', status: 3, title: 'Página web económica y rápida', description: 'Creación de una página sencilla para mostrar productos y medios de contacto.', rejectionReason: 'Evitá afirmaciones comerciales como “económica” y detallá mejor el alcance.', image: 'https://images.unsplash.com/photo-1547658719-da2b51169166?auto=format&fit=crop&w=1200&q=82' },
+  { owner: 1, category: 'Fotografía', status: 4, title: 'Sesión de fotografía comercial', description: 'Producción fotográfica para comercios y profesionales con entrega digital.', rejectionReason: 'Indicá cuántas fotografías incluye la entrega y el plazo estimado.', image: 'https://images.unsplash.com/photo-1554080353-a576cf803bda?auto=format&fit=crop&w=1200&q=82' },
+  { owner: 2, category: 'Docentes', status: 2, title: 'Taller de conversación en inglés', description: 'Encuentros grupales para practicar conversación, pronunciación y vocabulario cotidiano.', image: 'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=1200&q=82' },
+  { owner: 2, category: 'Diseño', status: 3, title: 'Diseños increíbles para tu marca', description: 'Diseño de recursos visuales para mejorar la comunicación de emprendimientos.', rejectionReason: 'Reemplazá “increíbles” por una descripción concreta de los entregables.', image: 'https://images.unsplash.com/photo-1542744094-3a31f272c490?auto=format&fit=crop&w=1200&q=82' },
+  { owner: 2, category: 'Freelancers', status: 4, title: 'Planificación mensual de contenidos', description: 'Organización de ideas y publicaciones para mantener activas las redes del negocio.', rejectionReason: 'Agregá la cantidad de publicaciones y plataformas incluidas.', image: 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=82' },
+  { owner: 3, category: 'Salud', status: 2, title: 'Plan de entrenamiento para principiantes', description: 'Rutinas progresivas orientadas a mejorar movilidad, fuerza y constancia semanal.', image: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1200&q=82' },
+  { owner: 3, category: 'Fotografía', status: 3, title: 'Las mejores fotos para eventos', description: 'Cobertura fotográfica para reuniones, celebraciones y encuentros sociales.', rejectionReason: 'Evitá expresiones promocionales como “las mejores” y detallá horas de cobertura.', image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=1200&q=82' },
+  { owner: 3, category: 'Docentes', status: 4, title: 'Preparación para exámenes de matemática', description: 'Clases de repaso y práctica para estudiantes que deben rendir evaluaciones.', rejectionReason: 'Especificá el nivel educativo y si las clases son presenciales u online.', image: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&w=1200&q=82' },
 ];
 
 const demoTickets = [
@@ -62,6 +71,22 @@ const demoTickets = [
   ] },
 ];
 
+const supportScenarios = demoUsers.flatMap((_, owner) => [
+  { owner, subject: `Demo pendiente ${owner + 1}: revisión de publicación`, status: 'OPEN', messages: [
+    ['user', 'Envié una publicación y quisiera saber cuándo será revisada.'],
+  ] },
+  { owner, subject: `Demo abierta ${owner + 1}: ayuda con el perfil`, status: 'OPEN', messages: [
+    ['user', 'Necesito ayuda para completar correctamente los datos de mi perfil.'],
+    ['admin', 'Claro. Revisá que nombre, teléfono e imagen estén completos. ¿En qué campo necesitás ayuda?'],
+    ['user', 'Gracias, necesitaba confirmar el formato del teléfono.'],
+  ] },
+  { owner, subject: `Demo resuelta ${owner + 1}: consulta de contacto`, status: 'CLOSED', messages: [
+    ['user', 'No encontraba los datos para contactar a un profesional.'],
+    ['admin', 'Los datos aparecen al abrir el servicio y seleccionar una opción de contacto.'],
+    ['user', 'Perfecto, ya pude comunicarme.'],
+  ] },
+]);
+
 async function upsertUser(connection, user, passwordHash) {
   await connection.execute(
     `INSERT INTO users (email, password_hash, created_at, is_active, phone, phone_verified)
@@ -96,17 +121,85 @@ async function upsertPost(connection, post, userIds, categoryIds) {
 
   if (existing) {
     await connection.execute(
-      `UPDATE posts SET description = ?, image_url = ?, is_active = 1, id_category = ?
+      `UPDATE posts SET description = ?, image_url = ?, is_active = ?, rejection_reason = ?, id_category = ?
        WHERE id_post = ?`,
-      [post.description, post.image, categoryId, existing.id_post]
+      [post.description, post.image, post.status ?? 1, post.rejectionReason || null, categoryId, existing.id_post]
     );
-    return;
+    return existing.id_post;
   }
 
+  const [result] = await connection.execute(
+    `INSERT INTO posts (title, description, image_url, created_at, is_active, rejection_reason, id_user, id_category)
+     VALUES (?, ?, ?, NOW(), ?, ?, ?, ?)`,
+    [post.title, post.description, post.image, post.status ?? 1, post.rejectionReason || null, ownerId, categoryId]
+  );
+  return result.insertId;
+}
+
+async function seedContactsAndReviews(connection, userIds, postIds) {
+  for (let userIndex = 0; userIndex < userIds.length; userIndex += 1) {
+    const contactUserId = userIds[userIndex];
+    const candidates = postIds
+      .map((id, postIndex) => ({ id, owner: demoPosts[postIndex].owner, status: demoPosts[postIndex].status ?? 1 }))
+      .filter((post) => post.owner !== userIndex && post.status === 1)
+      .slice(userIndex, userIndex + 3);
+
+    for (let contactIndex = 0; contactIndex < candidates.length; contactIndex += 1) {
+      const postId = candidates[contactIndex].id;
+      await connection.execute(
+        `INSERT INTO post_contacts (id_post, id_user, contacted_at, discarded)
+         VALUES (?, ?, DATE_SUB(NOW(), INTERVAL ? DAY), 0)
+         ON DUPLICATE KEY UPDATE contacted_at = VALUES(contacted_at), discarded = 0`,
+        [postId, contactUserId, 8 + userIndex + contactIndex],
+      );
+      const [[contact]] = await connection.execute(
+        'SELECT id_contact FROM post_contacts WHERE id_post = ? AND id_user = ? LIMIT 1',
+        [postId, contactUserId],
+      );
+      if (contactIndex < 2) {
+        const rating = 3 + ((userIndex + contactIndex) % 3);
+        await connection.execute(
+          `INSERT INTO reviews (id_contact, id_post, id_user, rating, created_at)
+           VALUES (?, ?, ?, ?, DATE_SUB(NOW(), INTERVAL ? DAY))
+           ON DUPLICATE KEY UPDATE rating = VALUES(rating), created_at = VALUES(created_at)`,
+          [contact.id_contact, postId, contactUserId, rating, 4 + userIndex + contactIndex],
+        );
+      }
+    }
+  }
+}
+
+async function ensureEngagementTables(connection) {
   await connection.execute(
-    `INSERT INTO posts (title, description, image_url, created_at, is_active, id_user, id_category)
-     VALUES (?, ?, ?, NOW(), 1, ?, ?)`,
-    [post.title, post.description, post.image, ownerId, categoryId]
+    `CREATE TABLE IF NOT EXISTS post_contacts (
+      id_contact INT NOT NULL AUTO_INCREMENT,
+      id_post INT NOT NULL,
+      id_user INT NOT NULL,
+      contacted_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+      discarded TINYINT DEFAULT 0,
+      PRIMARY KEY (id_contact),
+      UNIQUE KEY unique_contact (id_post, id_user),
+      KEY contact_user_idx (id_user),
+      CONSTRAINT post_contacts_post_fk FOREIGN KEY (id_post) REFERENCES posts (id_post),
+      CONSTRAINT post_contacts_user_fk FOREIGN KEY (id_user) REFERENCES users (id_user)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3`,
+  );
+  await connection.execute(
+    `CREATE TABLE IF NOT EXISTS reviews (
+      id_review INT NOT NULL AUTO_INCREMENT,
+      id_contact INT NOT NULL,
+      id_post INT NOT NULL,
+      id_user INT NOT NULL,
+      rating TINYINT NOT NULL,
+      created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (id_review),
+      UNIQUE KEY unique_review_contact (id_contact),
+      KEY review_post_idx (id_post),
+      KEY review_user_idx (id_user),
+      CONSTRAINT reviews_contact_fk FOREIGN KEY (id_contact) REFERENCES post_contacts (id_contact),
+      CONSTRAINT reviews_post_fk FOREIGN KEY (id_post) REFERENCES posts (id_post),
+      CONSTRAINT reviews_user_fk FOREIGN KEY (id_user) REFERENCES users (id_user)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3`,
   );
 }
 
@@ -159,6 +252,7 @@ async function seed() {
   });
 
   try {
+    await ensureEngagementTables(connection);
     await connection.beginTransaction();
     const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 10);
     const userIds = [];
@@ -172,9 +266,8 @@ async function seed() {
     const missingCategory = demoPosts.find(post => !categoryIds.has(post.category));
     if (missingCategory) throw new Error(`Falta la categoría: ${missingCategory.category}`);
 
-    for (const post of demoPosts) {
-      await upsertPost(connection, post, userIds, categoryIds);
-    }
+    const postIds = [];
+    for (const post of demoPosts) postIds.push(await upsertPost(connection, post, userIds, categoryIds));
 
     const [[admin]] = await connection.execute(
       `SELECT u.id_user FROM users u
@@ -184,9 +277,11 @@ async function seed() {
     );
     if (!admin) throw new Error('No se encontró un usuario administrador.');
 
-    for (const ticket of demoTickets) {
+    for (const ticket of [...demoTickets, ...supportScenarios]) {
       await upsertTicket(connection, ticket, userIds, admin.id_user);
     }
+
+    await seedContactsAndReviews(connection, userIds, postIds);
 
     const [postSummary] = await connection.execute(
       `SELECT c.name AS category, COUNT(*) AS total
@@ -205,7 +300,7 @@ async function seed() {
     );
 
     await connection.commit();
-    console.log('Demo lista: 4 usuarios, 12 publicaciones y 8 tickets.');
+    console.log(`Demo lista: 4 usuarios, ${demoPosts.length} publicaciones, consultas variadas, contactos y reseñas.`);
     console.table(postSummary);
     console.table(ticketSummary);
     console.log(`Acceso de usuarios demo: ana.demo@fivox.com / ${DEMO_PASSWORD}`);
@@ -218,6 +313,7 @@ async function seed() {
 }
 
 seed().catch(error => {
-  console.error('No se pudo crear la demo:', error.message);
+  console.error('No se pudo crear la demo:', error?.message || error);
+  if (error?.sqlMessage) console.error(error.sqlMessage);
   process.exitCode = 1;
 });

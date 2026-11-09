@@ -6,7 +6,7 @@ import pool from '../config/db';
 import authMiddleware from '../middlewares/auth';
 import requireAdmin from '../middlewares/requireAdmin';
 import upload from '../middlewares/upload';
-import { procedureRows } from '../types/database';
+import { procedureRows, selectRows } from '../types/database';
 
 const router = Router();
 
@@ -65,8 +65,24 @@ router.get('/categories', authMiddleware, async (req, res) => {
 // GET /api/posts
 router.get('/', authMiddleware, async (req, res) => {
   try {
-    const [result] = await pool.execute('CALL sp_get_posts()');
-    return res.status(200).json({ ok: true, data: procedureRows<RowDataPacket>(result) });
+    const [result] = await pool.execute(
+      `SELECT p.id_post, p.id_user, p.title, p.description, p.image_url, p.created_at,
+              pr.name AS author, pr.avatar_url AS author_avatar,
+              c.name AS category, c.id_category,
+              u.phone AS author_phone, u.email AS author_email,
+              ROUND(AVG(r.rating), 1) AS avg_rating,
+              COUNT(DISTINCT r.id_user) AS total_reviews
+       FROM posts p
+       INNER JOIN profiles pr ON p.id_user = pr.id_user
+       INNER JOIN categories c ON p.id_category = c.id_category
+       INNER JOIN users u ON p.id_user = u.id_user
+       LEFT JOIN reviews r ON p.id_post = r.id_post
+       WHERE p.is_active = 1
+       GROUP BY p.id_post, p.id_user, p.title, p.description, p.image_url, p.created_at,
+                pr.name, pr.avatar_url, c.name, c.id_category, u.phone, u.email
+       ORDER BY p.created_at DESC`,
+    );
+    return res.status(200).json({ ok: true, data: selectRows<RowDataPacket>(result) });
   } catch (error) {
     console.error('Error en sp_get_posts:', error);
     return res.status(500).json({ ok: false, message: 'Error al obtener publicaciones.' });
@@ -80,8 +96,8 @@ router.post<Record<string, never>, unknown, CreatePostBody>('/', authMiddleware,
   const categoryId = Number(id_category) || null;
   const proposedCategory = proposed_category?.trim() || null;
 
-  if (!title?.trim() || !description?.trim() || (!categoryId && !proposedCategory)) {
-    return res.status(400).json({ ok: false, message: 'Título, descripción y categoría son obligatorios.' });
+  if (!title?.trim() || !description?.trim() || !image_url?.trim() || (!categoryId && !proposedCategory)) {
+    return res.status(400).json({ ok: false, message: 'Título, descripción, imagen y categoría son obligatorios.' });
   }
   if (title.trim().length > 45 || description.trim().length > 300 || (proposedCategory && proposedCategory.length > 45)) {
     return res.status(400).json({ ok: false, message: 'La publicación supera el límite permitido.' });
@@ -124,7 +140,7 @@ router.post<Record<string, never>, unknown, CreatePostBody>('/', authMiddleware,
 router.get('/my', authMiddleware, async (req, res) => {
   try {
     const [result] = await pool.execute(
-      `SELECT p.id_post, p.title, p.description, p.image_url, p.created_at, p.is_active,
+      `SELECT p.id_post, p.id_user, p.title, p.description, p.image_url, p.created_at, p.is_active,
               p.rejection_reason, p.id_category, p.proposed_category,
               COALESCE(c.name, p.proposed_category) AS category
        FROM posts p
@@ -219,8 +235,8 @@ router.delete<{ id: string }>('/my/:id', authMiddleware, async (req, res) => {
 router.get('/pending', authMiddleware, requireAdmin, async (req, res) => {
   try {
     const [result] = await pool.execute(
-      `SELECT p.id_post, p.title, p.description, p.image_url, p.created_at, p.is_active,
-              p.id_category, p.proposed_category, pr.name AS author,
+      `SELECT p.id_post, p.id_user, p.title, p.description, p.image_url, p.created_at, p.is_active,
+              p.id_category, p.proposed_category, pr.name AS author, pr.avatar_url AS author_avatar,
               COALESCE(c.name, p.proposed_category) AS category
        FROM posts p
        INNER JOIN profiles pr ON p.id_user = pr.id_user
@@ -344,7 +360,7 @@ router.put<{ id: string }, unknown, { reason?: string }>('/:id/revision-request'
   if (reason.length > 255) return res.status(400).json({ ok: false, message: 'La sugerencia no puede superar los 255 caracteres.' });
   try {
     const [result] = await pool.execute<ResultSetHeader>(
-      'UPDATE posts SET is_active = 4, rejection_reason = ? WHERE id_post = ? AND is_active = 1',
+      'UPDATE posts SET is_active = 4, rejection_reason = ? WHERE id_post = ? AND is_active IN (1, 2)',
       [reason, req.params.id],
     );
     if (!result.affectedRows) return res.status(404).json({ ok: false, message: 'La publicación no está disponible para solicitar una edición.' });

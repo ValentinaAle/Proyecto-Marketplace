@@ -5,6 +5,7 @@ export interface Category {
 
 export interface Post {
   id_post: number;
+    id_user?: number;
   title: string;
   description: string;
   image_url?: string | null;
