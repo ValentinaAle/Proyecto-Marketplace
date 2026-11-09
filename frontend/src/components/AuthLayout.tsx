@@ -23,7 +23,7 @@ export function AuthLayout({ title, subtitle, className = '', children }: AuthLa
       <section className="auth-panel">
         <ThemeToggle className="auth-theme-toggle" />
         <div className="auth-form">
-          <a className="auth-mobile-brand" href="/" aria-label="FIVOX, inicio"><img src="/fivox-logo.png" alt="FIVOX" /></a>
+          <a className="auth-mobile-brand" href="/" aria-label="FIVOX, inicio"><img src="/fivox-favicon.png" alt="FIVOX" /></a>
           <header className="auth-heading">
             <h2>{title}</h2>
             <p>{subtitle}</p>

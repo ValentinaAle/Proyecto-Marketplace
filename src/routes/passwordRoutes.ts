@@ -40,7 +40,7 @@ router.post<Record<string, never>, unknown, ForgotBody>('/forgot', async (req, r
     const user = procedureRows<UserRow>(result)[0];
 
     if (!user) {
-      return res.status(200).json({ ok: true, message: 'Si el email existe, recibirás un código.' });
+      return res.status(200).json({ ok: true, message: 'Si el correo está registrado, recibirás un código de recuperación. Revisá también la carpeta de spam.' });
     }
 
     // Generar código de 6 dígitos
@@ -71,7 +71,7 @@ router.post<Record<string, never>, unknown, ForgotBody>('/forgot', async (req, r
       `,
     });
 
-    return res.status(200).json({ ok: true, message: 'Código enviado al email.' });
+    return res.status(200).json({ ok: true, message: 'Si el correo está registrado, recibirás un código de recuperación. Revisá también la carpeta de spam.' });
 
   } catch (error) {
     console.error('Error en forgot password:', error);

@@ -12,6 +12,8 @@ interface UserRow extends RowDataPacket {
   password_hash: string;
   is_active: number;
   phone: string | null;
+  disabled_reason: string | null;
+  deleted_at: string | null;
 }
 
 interface ProfileRow extends RowDataPacket {
@@ -186,13 +188,7 @@ export const login = async (
       });
     }
 
-    // 2. Verificar que la cuenta esté activa
-    if (!user.is_active) {
-      return res.status(403).json({
-        ok: false,
-        message: 'La cuenta está deshabilitada.',
-      });
-    }
+    if (user.deleted_at) return res.status(401).json({ ok: false, message: 'Credenciales incorrectas.' });
 
     // 3. Comparar contraseña
     const passwordMatch = await bcrypt.compare(password, user.password_hash);
@@ -231,6 +227,8 @@ export const login = async (
           name:       profile?.name       || null,
           avatar_url: profile?.avatar_url || null,
           role,
+          is_active: Number(user.is_active) === 1,
+          disabled_reason: user.disabled_reason || null,
         },
       },
     });

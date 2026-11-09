@@ -1,3 +1,5 @@
+import { clearSession } from '../auth/session';
+
 export interface ApiEnvelope<T> {
   ok: boolean;
   message?: string;
@@ -34,12 +36,22 @@ export function uploadImage<T>(path: string, token: string, field: string, file:
   return authorizedRequest<T>(path, token, { method: 'POST', body });
 }
 
-export function authorizedRequest<T>(path: string, token: string, init?: RequestInit) {
-  return apiRequest<T>(path, {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      ...init?.headers,
-    },
-  });
+export async function authorizedRequest<T>(path: string, token: string, init?: RequestInit) {
+  try {
+    return await apiRequest<T>(path, {
+      ...init,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        ...init?.headers,
+      },
+    });
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      clearSession();
+      if (window.location.pathname !== '/login') {
+        window.location.replace('/login?reason=session-expired');
+      }
+    }
+    throw error;
+  }
 }

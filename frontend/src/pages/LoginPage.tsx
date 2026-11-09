@@ -8,9 +8,14 @@ export function LoginPage() {
   const rememberedEmail = getRememberedEmail();
   const [email, setEmail] = useState(rememberedEmail);
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(Boolean(rememberedEmail));
   const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(() => (
+    new URLSearchParams(window.location.search).get('reason') === 'session-expired'
+      ? 'Tu sesión venció. Ingresá nuevamente para continuar.'
+      : null
+  ));
 
   useEffect(() => {
     if (hasSession()) goToHome();
@@ -43,7 +48,7 @@ export function LoginPage() {
     <AuthLayout title="Iniciar sesión" subtitle="Ingresá tus datos para continuar" className="auth-shell--login">
       <form className="login-form" onSubmit={submit} noValidate>
         <label>Email<input type="email" autoComplete="email" placeholder="ejemplo@email.com" aria-invalid={Boolean(errorMessage)} aria-describedby={errorMessage ? 'login-error' : undefined} value={email} onChange={(event) => { setEmail(event.target.value); setErrorMessage(null); }} /></label>
-        <label>Contraseña<input type="password" autoComplete="current-password" placeholder="••••••••" aria-invalid={Boolean(errorMessage)} aria-describedby={errorMessage ? 'login-error' : undefined} value={password} onChange={(event) => { setPassword(event.target.value); setErrorMessage(null); }} /></label>
+        <label>Contraseña<div className="auth-password-field"><input type={showPassword ? 'text' : 'password'} autoComplete="current-password" placeholder="••••••••" aria-invalid={Boolean(errorMessage)} aria-describedby={errorMessage ? 'login-error' : undefined} value={password} onChange={(event) => { setPassword(event.target.value); setErrorMessage(null); }} /><button type="button" aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'} title={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'} aria-pressed={showPassword} onClick={() => setShowPassword((current) => !current)}><i className={`bi ${showPassword ? 'bi-eye-slash' : 'bi-eye'}`} aria-hidden="true" /></button></div></label>
         <div className="form-options">
           <label className="checkbox" htmlFor="remember-login"><input id="remember-login" type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} /><span>Recordarme</span></label>
           <Link to="/forgot-password">¿Olvidaste tu contraseña?</Link>

@@ -24,7 +24,7 @@ export function ForgotPasswordPage() {
         if (!email.trim()) throw new Error('Ingresá tu email.');
         await apiRequest<unknown>('/password/forgot', { method: 'POST', body: JSON.stringify({ email: email.trim() }) });
         setStep('code');
-        setAlert({ tone: 'success', message: 'Código enviado. Revisá tu bandeja de entrada.' });
+        setAlert({ tone: 'success', message: 'Si el correo está registrado, recibirás un código de recuperación. Revisá también la carpeta de spam.' });
       } else if (step === 'code') {
         if (code.trim().length < 6) throw new Error('Ingresá el código de 6 dígitos.');
         await apiRequest<unknown>('/password/verify', { method: 'POST', body: JSON.stringify({ email, code: code.trim() }) });
