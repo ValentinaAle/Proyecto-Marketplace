@@ -12,13 +12,14 @@ type Ticket = {
   unread_count?: number;
   admin_unread_count?: number;
   admin_replies?: number;
+  last_message_from_admin?: number;
 };
 
 type TicketMessage = { id_message: number; id_user: number; message: string; created_at: string };
 type Filter = 'unread' | 'open' | 'closed' | 'all';
-type Props = { token: string; user: SessionUser };
+type Props = { token: string; user: SessionUser; onUnreadChanged?: () => void };
 
-export function SupportView({ token, user }: Props) {
+export function SupportView({ token, user, onUnreadChanged }: Props) {
   const isAdmin = user.role === 'ADMIN';
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [selected, setSelected] = useState<Ticket | null>(null);
@@ -79,8 +80,8 @@ export function SupportView({ token, user }: Props) {
       || (filter === 'closed'
         ? ticket.status === 'CLOSED'
         : filter === 'open'
-          ? ticket.status === 'OPEN' && Number(ticket.admin_replies || 0) > 0
-          : ticket.status === 'OPEN' && Number(ticket.admin_replies || 0) === 0);
+          ? ticket.status === 'OPEN' && Number(ticket.last_message_from_admin || 0) === 1
+          : ticket.status === 'OPEN' && Number(ticket.last_message_from_admin || 0) === 0);
     const normalized = query.trim().toLocaleLowerCase('es');
     return matchesFilter && (!normalized || `${ticket.id_ticket} ${ticket.subject || ''} ${ticket.user_name || ''}`.toLocaleLowerCase('es').includes(normalized));
   }), [tickets, filter, query]);
@@ -90,7 +91,7 @@ export function SupportView({ token, user }: Props) {
     await Promise.all([
       loadMessages(ticket.id_ticket),
       authorizedRequest<unknown>(`/support/tickets/${ticket.id_ticket}/${isAdmin ? 'read-admin' : 'read'}`, token, { method: 'PUT' }),
-    ]).catch((reason: Error) => setError(reason.message));
+    ]).then(() => { void loadTickets(); onUnreadChanged?.(); }).catch((reason: Error) => setError(reason.message));
   }
 
   async function sendMessage(event: FormEvent<HTMLFormElement>) {
@@ -137,25 +138,25 @@ export function SupportView({ token, user }: Props) {
 
   function ticketTone(ticket: Ticket) {
     if (ticket.status === 'CLOSED') return 'is-closed';
-    if (Number(ticket.admin_replies || 0) === 0) return 'is-pending';
+    if (Number(ticket.last_message_from_admin || 0) === 0) return 'is-pending';
     return 'is-open';
   }
 
   function ticketStateLabel(ticket: Ticket) {
     if (ticket.status === 'CLOSED') return 'Resuelta';
-    return Number(ticket.admin_replies || 0) > 0 ? 'En conversación' : 'Pendiente';
+    return Number(ticket.last_message_from_admin || 0) === 1 ? 'En conversación' : 'Pendiente';
   }
 
   function ticketActivity(ticket: Ticket) {
     if (ticket.status === 'CLOSED') return { icon: 'bi-check-circle', label: 'Consulta resuelta' };
     const replies = Number(ticket.admin_replies || 0);
-    if (replies === 0) return { icon: 'bi-clock', label: 'Esperando respuesta del equipo' };
+    if (Number(ticket.last_message_from_admin || 0) === 0) return { icon: 'bi-clock', label: 'Esperando una respuesta del equipo' };
     return { icon: 'bi-chat-left-text', label: `${replies} ${replies === 1 ? 'respuesta' : 'respuestas'} del equipo` };
   }
 
   return <><section className="support-view" aria-labelledby="support-title">
     <header className="workspace-heading my-services-heading support-heading">
-      <div className="reviews-heading-copy"><div><h1 id="support-title">{isAdmin ? 'Gestión de soporte' : 'Centro de ayuda'}</h1><p>{isAdmin ? 'Gestioná y respondé las consultas de la comunidad.' : 'Contactate con el equipo de FIVOX.'}</p></div></div>
+      <div className="reviews-heading-copy"><div><h1 id="support-title">{isAdmin ? 'Gestión de Soporte' : 'Centro de ayuda'}</h1><p>{isAdmin ? 'Gestioná y respondé las consultas de la comunidad.' : 'Contactate con el equipo de FIVOX.'}</p></div></div>
       <div className="support-heading-actions">
         <label className="ticket-search ticket-search--header"><i className="bi bi-search" /><input type="search" aria-label="Buscar consulta" placeholder="Buscar consulta…" value={query} onChange={(event) => setQuery(event.target.value)} /></label>
         {!isAdmin && <button className="new-ticket-action" type="button" aria-label="Nueva consulta" data-tooltip="Nueva consulta" onClick={() => { setNewTicket(true); setSelected(null); }}><i className="bi bi-plus-lg" aria-hidden="true" /></button>}
